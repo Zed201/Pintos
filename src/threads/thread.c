@@ -11,6 +11,8 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
+ 
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -19,7 +21,6 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
-#define A 55
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -28,6 +29,8 @@ static struct list ready_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
+
+static struct list block_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -93,6 +96,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init(&block_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -118,6 +122,10 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+void pr (struct thread *t, void *aux){
+  printf("%s dormindo por tick %lld\n", t->name, t->sleep_time);
+}
+
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -138,6 +146,16 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+
+    // debug de printar toda a list de blocked(tem de desabilitar as intettupções)
+  enum intr_level old_level;
+
+  old_level = intr_disable ();
+
+  thread_foreach_n_list(&block_list, pr, NULL);
+
+  intr_set_level(old_level);
 }
 
 /* Prints thread statistics. */
@@ -332,6 +350,22 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+
+void
+thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux)
+{
+  struct list_elem *e;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (n_list); e != list_end (n_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
+      func (t, aux);
+    }
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
@@ -463,6 +497,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->sleep_time = 0;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -588,3 +623,34 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+/* Compares the value of two list elements A and B, given
+   auxiliary data AUX.  Returns true if A is less than B, or
+   false if A is greater than or equal to B. */
+bool ord (const struct list_elem *a, const struct list_elem *b, void *aux){
+  struct thread *A = list_entry(a, struct thread, elem), *B = list_entry(a, struct thread, elem);
+
+  return A->sleep_time < B->sleep_time;
+
+}
+
+void thread_yield_block(int sleep_time){
+  struct thread *t = thread_current();
+  enum intr_level old_level;
+
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+  if (t != idle_thread) {
+    t->sleep_time = sleep_time;
+    list_insert_ordered(&block_list, &(t->elem), ord, NULL);
+    printf("Thread %s vai dormir por %lld\n", t->name, t->sleep_time);
+  }
+
+  // TODO: talvez colocar um thread_block
+  t->status = THREAD_BLOCKED;
+  schedule();
+  intr_set_level(old_level);
+  
+}
