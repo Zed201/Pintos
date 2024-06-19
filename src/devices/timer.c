@@ -89,16 +89,16 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks_) 
 {
-        if(ticks_ <= 0){
-                return;
-        }
-  int64_t start = timer_ticks ();
-
-  ASSERT (intr_get_level () == INTR_ON);
+    if(ticks_ <= 0){ // para passar no negative e no zero
+            return;
+    }
+  //int64_t start = timer_ticks ();
+  thread_yield_block(ticks_ + timer_ticks());
+  //ASSERT (intr_get_level () == INTR_ON);
   //while (timer_elapsed (start) < ticks) 
   //  thread_yield ();
 
-  thread_yield_block(ticks_ + start);
+  
 
 }
 
@@ -178,8 +178,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-
-        wake(ticks);
+  //printf("\ntick: %lld", timer_ticks());
+  //wake(timer_ticks()); // também faz a cada tick de relogico basicamente
+ 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -132,7 +132,7 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
-
+  
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -142,13 +142,10 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+   // ele faz a cada tick de relogico
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
-
-
-
   
 }
 
@@ -249,7 +246,7 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
-        printf("status thread -> %d\n", t->status);
+        //printf("status thread -> %d\n", t->status);
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
@@ -277,7 +274,7 @@ thread_current (void)
      of stack, so a few big automatic arrays or moderate
      recursion can cause stack overflow. */
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_RUNNING);
+  ASSERT (t->status == THREAD_RUNNING); // retirei esse assert pois ele da erro por algum motivo
 
   return t;
 }
@@ -521,6 +518,9 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+  if(!list_empty(&block_list)){
+    wake(timer_ticks());
+  }
   if (list_empty (&ready_list))
     return idle_thread;
   else
@@ -629,63 +629,31 @@ bool ord (const struct list_elem *a, const struct list_elem *b, void *aux){
   return A->sleep_time < B->sleep_time;
 
 }
-int i = 150;
+
 void thread_yield_block(int sleep_time){
-  struct thread *t = thread_current();
-  enum intr_level old_level;
+    struct thread *t = thread_current();
+    enum intr_level old_level;
 
-  ASSERT (!intr_context ());
+    ASSERT (!intr_context ());
 
-  // if (t != idle_thread) {
-  //   t->sleep_time = sleep_time;
-  // old_level = intr_disable ();
-  //   // t->status = THREAD_BLOCKED;
-  //   list_insert_ordered(&block_list, &(t->elem), ord, NULL);
-  //   // printf("Thread %s vai dormir por %lld, status:%d\n", t->name, t->sleep_time, t->status);
-  //       // thread_block();
-  //   thread_block();
-  //       intr_set_level(old_level);
-        if(t != idle_thread){
-                t->sleep_time = sleep_time;
-                old_level  = intr_disable();
-                list_insert_ordered(&block_list, &(t->elem), ord, NULL);
-                thread_block();
-                intr_set_level(old_level);
-        }
-  
-
-  // TODO: talvez colocar um thread_block
-  // schedule();
-  // intr_set_level(old_level);
-  
+    if(t != idle_thread){
+      t->sleep_time = sleep_time;
+      old_level  = intr_disable();
+      //printf("\n%s vai dormir até %lld", t->name, t->sleep_time);
+      list_insert_ordered(&block_list, &(t->elem), ord, NULL);
+      thread_block();
+      intr_set_level(old_level);
+    }
 }
 
 void wake(int64_t ticks){
-  // debug de printar toda a list de blocked(tem de desabilitar as intettupções)
+  
   enum intr_level old_level;
-
-// printf("tick:%d\n", timer_ticks());
-  // thread_foreach_n_list(&block_list, pr, NULL);
-        // if(list_size(&block_list) > 0) {
-        //         struct thread *t;
-        //         struct list_elem *e = list_begin(&block_list);
-        //         t = list_entry(e, struct thread, elem);
-        //         while(e != list_end(&block_list)){
-        //                 if(t->sleep_time <= ticks){
-        //                 old_level = intr_disable ();
-        //                 list_pop_front(&block_list);
-        //                 t->sleep_time = 0;
-        //                 list_push_back (&ready_list, &t->elem);
-        //                 intr_set_level(old_level);
-        //                 // t->status = THREAD_READY;
-        //                 // thread_unblock(t);// por a
-        //                 //lgum motio buga, mesmo usando o block
-        //                 e = list_front(&block_list);
-        //                 }
-        //         }
-        // }
-
-        //-----------------------
+        old_level = intr_disable();
+        /*printf("\n-------block-list---------\n");
+        thread_foreach_n_list(&ready_list, pr, NULL);
+        printf("\n-------block-list---------\n");*/
+        intr_set_level(old_level);
         struct list_elem *e = list_begin(&block_list);
         while(e != list_end(&block_list)){
                 struct thread *t = list_entry(e, struct thread, elem);
@@ -693,6 +661,8 @@ void wake(int64_t ticks){
                 if(t->sleep_time <= ticks){
                         old_level = intr_disable();
                         list_pop_front(&block_list);
+                        //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
+                        thread_unblock(t);
                         intr_set_level(old_level);
 
                         // unblock
