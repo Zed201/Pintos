@@ -48,7 +48,44 @@ p = floor(PriMax - (\frac{RecentCpuTime}{4}) - (nice * 2))
 O kernel não suporta float nem double, então a doc recomenda usar o formato de 17.14, 17 bits para a parte inteira e 14 para a fracionária; Para transformar reais nesses tipos é só multiplicar por 2^Q, onde Q é o numero de bits separado para a parte fracionária, e truncar para int, a documentação recomenda usar isso no recent cpu time e no avg, nesse caso então vai basicamente simular operações em float usando inteiros(ver [aqui](https://www.scs.stanford.edu/23wi-cs212/pintos/pintos_7.html) como as operações podem ser feitas
 </details>
 
+<details>
+    <summary>Tests</summary>
+
+    
+- [X] FAIL tests/threads/alarm-single
+- [X] FAIL tests/threads/alarm-multiple
+- [X] FAIL tests/threads/alarm-simultaneous
+- [ ] FAIL tests/threads/alarm-priority
+- [X] pass tests/threads/alarm-zero
+- [X] pass tests/threads/alarm-negative
+- [ ] FAIL tests/threads/priority-change
+- [ ] FAIL tests/threads/priority-donate-one
+- [ ] FAIL tests/threads/priority-donate-multiple
+- [ ] FAIL tests/threads/priority-donate-multiple2
+- [ ] FAIL tests/threads/priority-donate-nest
+- [ ] FAIL tests/threads/priority-donate-sema
+- [ ] FAIL tests/threads/priority-donate-lower
+- [ ] FAIL tests/threads/priority-fifo
+- [ ] FAIL tests/threads/priority-preempt
+- [ ] FAIL tests/threads/priority-sema
+- [ ] FAIL tests/threads/priority-condvar
+- [ ] FAIL tests/threads/priority-donate-chain
+- [ ] FAIL tests/threads/mlfqs-load-1
+- [ ] FAIL tests/threads/mlfqs-load-60
+- [ ] FAIL tests/threads/mlfqs-load-avg
+- [ ] FAIL tests/threads/mlfqs-recent-1
+- [ ] FAIL tests/threads/mlfqs-fair-2
+- [ ] FAIL tests/threads/mlfqs-fair-20
+- [ ] FAIL tests/threads/mlfqs-nice-2
+- [ ] FAIL tests/threads/mlfqs-nice-10
+- [ ] FAIL tests/threads/mlfqs-block
+
+
+</details>
+
 
 Equipe:
 | [<img src="https://avatars.githubusercontent.com/u/96800329?v=4" width=115><br><sub>Luiz Gustavo</sub>](https://github.com/Zed201) |  [<img src="https://avatars.githubusercontent.com/u/101292201?v=4" width=115><br><sub>Heitor Melo</sub>](https://github.com/HeitorMelo)  | [<img src="https://avatars.githubusercontent.com/u/129231720?v=4" width=115><br><sub>Henrique César</sub>](https://github.com/SapoSopa) | [<img src="https://avatars.githubusercontent.com/u/136932932?v=4" width=115><br><sub>Emanuelle Giovanna</sub>](https://github.com/manugio3)
 | :---: | :---: | :--:| :--:|
+
+
