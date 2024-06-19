@@ -14,34 +14,40 @@ não precisa nem no `make check` do src/threads/build (se der algum erro oque fo
 <details>
 <summary>Recursos necessários </summary>
 
-<details>
-<summary>Make </summary>
+1. 
+   <details>
+   <summary>Make </summary>
+   
+   - O make serve para ajudar nossa vida. Não há uma obrigatoriedade de usá-lo, mas iremos;
+   - Caso necessite instalá-lo, utilize o comando `sudo apt install make`;
+   </details>
 
-- O make serve para ajudar nossa vida. Não há uma obrigatoriedade de usá-lo, mas iremos;
-- Caso necessite instalá-lo, utilize o comando `sudo apt install make`;
+2.
+   <details>
+   <summary>GCC e GDB </summary>
+   
+   - Compilador e Depurador para C;
+   - Caso necessite instalá-los, utilize os comandos `sudo apt install gcc` e `sudo apt install gdb`;
+   </details>
+
+3. 
+   <details>
+   <summary>Qemu </summary>
+   
+   - Recurso necessário para executar o sistema nos casos testes;
+   - Caso necessite instalá-lo, utilize o comando `sudo apt install qemu-system-i386`;
+   </details>
+
+4. 
+   <details>
+   <summary>Boch </summary>
+   
+   - Alternativa mais rápida ao Qemu, entretanto não utilizaremos ele;
+   - Se desejar saber como fazê-lo funcionar, acesse `https://web.stanford.edu/class/cs140/projects/pintos/pintos_12.html#SEC167`;
+   </details>
+
 </details>
 
-<details>
-<summary>GCC e GDB </summary>
-
-- Compilador e Depurqador para C;
-- Caso necessite instalá-los, utilize os comandos `sudo apt install gcc` e `sudoapt install gdb`;
-</details>
-
-<details>
-<summary>Qemu </summary>
-
-- Recurso necessário para executar o sistema nos casos testes;
-- Caso necessite instalá-lo, utilize o comando `sudo apt install qemu-system-i386`;
-</details>
-
-<details>
-<summary>Boch </summary>
-
-- Alternativa mais rápido ao Qemu, entretanto não utilizaremos ele;
-- Se desejar saber como fazê-lo funciona, acesse `https://web.stanford.edu/class/cs140/projects/pintos/pintos_12.html#SEC167`;
-</details>
-</details>
 
 <details>
 <summary>WSL </summary>
@@ -105,4 +111,39 @@ p = floor(PriMax - (\frac{RecentCpuTime}{4}) - (nice * 2))
 O kernel não suporta float nem double, então a doc recomenda usar o formato de 17.14, 17 bits para a parte inteira e 14 para a fracionária; Para transformar reais nesses tipos é só multiplicar por 2^Q, onde Q é o numero de bits separado para a parte fracionária, e truncar para int, a documentação recomenda usar isso no recent cpu time e no avg, nesse caso então vai basicamente simular operações em float usando inteiros(ver [aqui](https://www.scs.stanford.edu/23wi-cs212/pintos/pintos_7.html) como as operações podem ser feitas;
 </details>
 
+<details>
+    <summary>Tests</summary>
+
+
+- [ ] FAIL tests/threads/alarm-single
+- [ ] FAIL tests/threads/alarm-multiple
+- [ ] FAIL tests/threads/alarm-simultaneous
+- [ ] FAIL tests/threads/alarm-priority
+- [ ] pass tests/threads/alarm-zero
+- [ ] pass tests/threads/alarm-negative
+- [ ] FAIL tests/threads/priority-change
+- [ ] FAIL tests/threads/priority-donate-one
+- [ ] FAIL tests/threads/priority-donate-multiple
+- [ ] FAIL tests/threads/priority-donate-multiple2
+- [ ] FAIL tests/threads/priority-donate-nest
+- [ ] FAIL tests/threads/priority-donate-sema
+- [ ] FAIL tests/threads/priority-donate-lower
+- [ ] FAIL tests/threads/priority-fifo
+- [ ] FAIL tests/threads/priority-preempt
+- [ ] FAIL tests/threads/priority-sema
+- [ ] FAIL tests/threads/priority-condvar
+- [ ] FAIL tests/threads/priority-donate-chain
+- [ ] FAIL tests/threads/mlfqs-load-1
+- [ ] FAIL tests/threads/mlfqs-load-60
+- [ ] FAIL tests/threads/mlfqs-load-avg
+- [ ] FAIL tests/threads/mlfqs-recent-1
+- [ ] FAIL tests/threads/mlfqs-fair-2
+- [ ] FAIL tests/threads/mlfqs-fair-20
+- [ ] FAIL tests/threads/mlfqs-nice-2
+- [ ] FAIL tests/threads/mlfqs-nice-10
+- [ ] FAIL tests/threads/mlfqs-block
+
+
+</details>
+<details>
 
