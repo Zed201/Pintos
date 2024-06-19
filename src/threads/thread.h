@@ -142,5 +142,5 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void thread_yield_block(int sleep_time);
-
+void wake(int64_t ticks);
 #endif /* threads/thread.h */
