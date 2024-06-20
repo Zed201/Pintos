@@ -127,14 +127,13 @@ thread_start (void)
 }
 
 float_type avg = 0;
+float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
+float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
 
-void avg_cal(){
-        int r = list_size(&ready_list);
-        if(thread_current() != idle_thread){
-                r += 1;
-        }
+void avg_cal(){ 
         // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) - t));
-         avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(r),  60));
+        // avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)),  60));
+        avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)));
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -408,7 +407,6 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 { 
-  //avg = (59.0/60) * avg + (1.0/60) * (list_size(&ready_list));
         enum intr_level old_level = intr_disable();
         int r =  FLOAT_INT_ZERO(avg * 100);
         intr_set_level(old_level);
