@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "../lib/kernel/float_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -114,6 +115,8 @@ static struct list block_list;
 
 void thread_init (void);
 void thread_start (void);
+
+void avg_cal();
 
 void thread_tick (void);
 void thread_print_stats (void);

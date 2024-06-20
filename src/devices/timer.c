@@ -181,7 +181,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  //printf("\ntick: %lld", timer_ticks());
+        if(thread_mlfqs){
+                if(timer_ticks() % TIMER_FREQ == 0){
+                        avg_cal();
+                }
+
+        }
+          //printf("\ntick: %lld", timer_ticks());
   //wake(timer_ticks()); // também faz a cada tick de relogico basicamente
  
 }

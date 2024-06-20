@@ -126,15 +126,27 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+float_type avg = 0;
+
+void avg_cal(){
+        int r = list_size(&ready_list);
+        if(thread_current() != idle_thread){
+                r += 1;
+        }
+        // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) - t));
+         avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(r),  60));
+}
 
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
 thread_tick (void) 
 {
-  //list_sort(&block_list, Reord, NULL);
+       
   struct thread *t = thread_current ();
-  
+        //  if(timer_ticks() % TIMER_FREQ == 0) {
+        //        avg = avg_cal(t == idle_thread);
+        // }
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -391,15 +403,16 @@ thread_get_nice (void)
   return 0;
 }
 
-int avg = 0;
+
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
-{
-  // todo: DEPOIS
+{ 
   //avg = (59.0/60) * avg + (1.0/60) * (list_size(&ready_list));
-  //int a = FLOAT_INT_MUL(FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60)), avg) 
-  return 0;
+        enum intr_level old_level = intr_disable();
+        int r =  FLOAT_INT_ZERO(avg * 100);
+        intr_set_level(old_level);
+  return r;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */

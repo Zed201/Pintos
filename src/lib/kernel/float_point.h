@@ -12,8 +12,8 @@ typedef int float_type;
 #define FLOAT_ADD(x, y) (x + y)
 #define FLOAT_SUB(x, y) (x - y)
 // multi/divide entre dois float type
-#define FLOAT_MUL(x, y) ((float_type)((((int64_t) x * y) / F)))
-#define FLOAT_DIV(x, y) ((float_type)((((int64_t) x * F) / y)))
+#define FLOAT_MUL(x, y) ((float_type)((((int64_t) x) * y / F)))
+#define FLOAT_DIV(x, y) ((float_type)((((int64_t) x) * F / y)))
 // soma/sub entre float type(x) e integer(n)
 #define FLOAT_INT_ADD(x, n) (x + (n << Q))
 #define FLOAT_INT_SUB(x, n) (x - (n << Q))
@@ -24,5 +24,5 @@ typedef int float_type;
 // basicamente retorna a parte inteira
 #define FLOAT_INT_ZERO(x) (int) (x >> Q)
 // round de float
-#define FLOAT_INT_ROUND(x) (x >= 0) ? (x + (F/2)) : (x - (F/2))
+#define FLOAT_INT_ROUND(x) (x >= 0) ? (x + (F/2))/F : (x - (F/2))/F
 #endif
