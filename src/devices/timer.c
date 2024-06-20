@@ -92,21 +92,17 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks_) 
 {
-  int64_t start = timer_ticks ();
-  
-  if(ticks_ <= 0){
-    return;
-  }
-
+    if(ticks_ <= 0){ // para passar no negative e no zero
+            return;
+    }
+  //int64_t start = timer_ticks ();
   ASSERT (intr_get_level () == INTR_ON);
+  thread_yield_block(ticks_ + timer_ticks());
   //while (timer_elapsed (start) < ticks) 
-    //thread_yield ();
-  struct thread* t = thread_current();
-  
-  t->sleep_ticks = ticks_ + start;
-  printf("---- start: %lld | %lld | %lld\n", start, ticks_, t->sleep_ticks);
+  //  thread_yield ();
 
-  thread_yield_block();
+  
+
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -185,6 +181,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  //printf("\ntick: %lld", timer_ticks());
+  //wake(timer_ticks()); // também faz a cada tick de relogico basicamente
+ 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -257,3 +256,4 @@ real_time_delay (int64_t num, int32_t denom)
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
 }
+

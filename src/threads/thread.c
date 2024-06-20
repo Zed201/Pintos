@@ -11,7 +11,11 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+
 #include "../lib/kernel/float_point.h"
+
+#include "devices/timer.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -28,6 +32,8 @@ static struct list ready_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
+
+static struct list block_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -121,7 +127,6 @@ thread_start (void)
 }
 
 
-
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -129,33 +134,7 @@ thread_tick (void)
 {
   //list_sort(&block_list, Reord, NULL);
   struct thread *t = thread_current ();
-
-  // verificar se tem uma thread para ser desblocada
   
-  struct list_elem *e;
-  
-  ASSERT (intr_get_level () == INTR_OFF);
-  
-  for (e = list_begin (&block_list) ; e != list_end(&block_list); e = list_next(e))
-  {
-    if( e == NULL){
-      break;
-    }
-    //printf("Entrou no while\n");
-      struct thread *b = list_entry (e, struct thread, elem);
-      //printf("while_%lld\n", b->sleep_ticks);
-      //timer_print_stats();
-      if(b->sleep_ticks >= timer_ticks()){
-        b->sleep_ticks = 0;
-        //e = list_pop_front(&block_list);
-        //struct list_elem *g = 
-        list_remove(&b->elem);
-        //b = list_entry(g, struct thread, elem);
-        //printf("---%lld\n", b->status);
-        thread_unblock(b);
-      } 
-  }
-
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -165,10 +144,11 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+   // ele faz a cada tick de relogico
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+  
 }
 
 /* Prints thread statistics. */
@@ -270,6 +250,7 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
+        //printf("status thread -> %d\n", t->status);
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
@@ -297,7 +278,7 @@ thread_current (void)
      of stack, so a few big automatic arrays or moderate
      recursion can cause stack overflow. */
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_RUNNING);
+  ASSERT (t->status == THREAD_RUNNING); // retirei esse assert pois ele da erro por algum motivo
 
   return t;
 }
@@ -361,6 +342,22 @@ thread_foreach (thread_action_func *func, void *aux)
        e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, allelem);
+      func (t, aux);
+    }
+}
+
+
+void
+thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux)
+{
+  struct list_elem *e;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (n_list); e != list_end (n_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
       func (t, aux);
     }
 }
@@ -499,6 +496,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->sleep_time = 0;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -527,6 +525,9 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+  if(!list_empty(&block_list)){
+    wake(timer_ticks());
+  }
   if (list_empty (&ready_list))
     return idle_thread;
   else
@@ -625,34 +626,58 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux){
-  struct thread *A = list_entry (a, struct thread, elem);
-  struct thread *B = list_entry (b, struct thread, elem);
 
-  if(A->sleep_ticks < B->sleep_ticks){
-    return true;
-  } else {
-    return false;
-  }
+/* Compares the value of two list elements A and B, given
+   auxiliary data AUX.  Returns true if A is less than B, or
+   false if A is greater than or equal to B. */
+bool ord (const struct list_elem *a, const struct list_elem *b, void *aux){
+  struct thread *A = list_entry(a, struct thread, elem), *B = list_entry(b, struct thread, elem);
+
+  return A->sleep_time < B->sleep_time;
+
 }
 
-void
-thread_yield_block (void) 
-{
-  struct thread *cur = thread_current ();
-  enum intr_level old_level;
+void thread_yield_block(int sleep_time){
+    struct thread *t = thread_current();
+    enum intr_level old_level;
+
+    ASSERT (!intr_context ());
+
+    if(t != idle_thread){
+      t->sleep_time = sleep_time;
+      old_level  = intr_disable();
+      
+      list_insert_ordered(&block_list, &(t->elem), ord, NULL);
+      thread_block();
+      intr_set_level(old_level);
+    }
+}
+
+void wake(int64_t ticks){
   
-  ASSERT (!intr_context ());
-  ASSERT (cur->status != THREAD_BLOCKED);
+  enum intr_level old_level;
+        old_level = intr_disable();
+        intr_set_level(old_level);
+        struct list_elem *e = list_begin(&block_list);
+        while(e != list_end(&block_list)){
+                struct thread *t = list_entry(e, struct thread, elem);
 
+                if(t->sleep_time <= ticks){
+                        old_level = intr_disable();
+                        list_pop_front(&block_list);
+                        //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
+                        thread_unblock(t);
+                        intr_set_level(old_level);
 
-  old_level = intr_disable ();
-  if (cur != idle_thread){
-     list_insert_ordered(&block_list, &(cur->elem), Reord, NULL);   
-     //list_push_front(&block_list, &(cur->elem));
-  }
-   
-  cur->status = THREAD_BLOCKED;
-  schedule ();
-  intr_set_level (old_level);
+                        // unblock
+                        if(!list_empty(&block_list)){
+                                e = list_front(&block_list);
+                        } else {
+                                break;
+                        }
+                } else {
+                        break;
+                }
+        }
 }
+
