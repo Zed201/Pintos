@@ -145,7 +145,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux);
-void thread_yield_block(void);
 
 void thread_yield_block(int sleep_time);
 void wake(int64_t ticks);
