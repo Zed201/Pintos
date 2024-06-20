@@ -115,35 +115,37 @@ O kernel não suporta float nem double, então a doc recomenda usar o formato de
     <summary>Tests</summary>
 
 
-- [ ] FAIL tests/threads/alarm-single
-- [ ] FAIL tests/threads/alarm-multiple
-- [ ] FAIL tests/threads/alarm-simultaneous
-- [ ] FAIL tests/threads/alarm-priority
-- [ ] pass tests/threads/alarm-zero
-- [ ] pass tests/threads/alarm-negative
-- [ ] FAIL tests/threads/priority-change
-- [ ] FAIL tests/threads/priority-donate-one
-- [ ] FAIL tests/threads/priority-donate-multiple
-- [ ] FAIL tests/threads/priority-donate-multiple2
-- [ ] FAIL tests/threads/priority-donate-nest
-- [ ] FAIL tests/threads/priority-donate-sema
-- [ ] FAIL tests/threads/priority-donate-lower
-- [ ] FAIL tests/threads/priority-fifo
-- [ ] FAIL tests/threads/priority-preempt
-- [ ] FAIL tests/threads/priority-sema
-- [ ] FAIL tests/threads/priority-condvar
-- [ ] FAIL tests/threads/priority-donate-chain
-- [ ] FAIL tests/threads/mlfqs-load-1
-- [ ] FAIL tests/threads/mlfqs-load-60
-- [ ] FAIL tests/threads/mlfqs-load-avg
-- [ ] FAIL tests/threads/mlfqs-recent-1
-- [ ] FAIL tests/threads/mlfqs-fair-2
-- [ ] FAIL tests/threads/mlfqs-fair-20
-- [ ] FAIL tests/threads/mlfqs-nice-2
-- [ ] FAIL tests/threads/mlfqs-nice-10
-- [ ] FAIL tests/threads/mlfqs-block
+- [ ] tests/threads/alarm-single
+- [ ] tests/threads/alarm-multiple
+- [ ] tests/threads/alarm-simultaneous
+- [ ] tests/threads/alarm-priority
+- [ ] tests/threads/alarm-zero
+- [ ] tests/threads/alarm-negative
+- [ ] tests/threads/priority-change
+- [ ] tests/threads/priority-donate-one
+- [ ] tests/threads/priority-donate-multiple
+- [ ] tests/threads/priority-donate-multiple2
+- [ ] tests/threads/priority-donate-nest
+- [ ] tests/threads/priority-donate-sema
+- [ ] tests/threads/priority-donate-lower
+- [ ] tests/threads/priority-fifo
+- [ ] tests/threads/priority-preempt
+- [ ] tests/threads/priority-sema
+- [ ] tests/threads/priority-condvar
+- [ ] tests/threads/priority-donate-chain
+- [ ] tests/threads/mlfqs-load-1
+- [ ] tests/threads/mlfqs-load-60
+- [ ] tests/threads/mlfqs-load-avg
+- [ ] tests/threads/mlfqs-recent-1
+- [ ] tests/threads/mlfqs-fair-2
+- [ ] tests/threads/mlfqs-fair-20
+- [ ] tests/threads/mlfqs-nice-2
+- [ ] tests/threads/mlfqs-nice-10
+- [ ] tests/threads/mlfqs-block
 
 
 </details>
 <details>
+   - Para nossa aplicação do projeto de Infraestrutura de Software, nenhum dos testes de priority serão exigidos;
+</details>
 
