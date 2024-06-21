@@ -126,16 +126,6 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
-float_type avg = 0;
-float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
-float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
-
-void avg_cal(){ 
-        // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) - t));
-        // avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)),  60));
-        avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)));
-}
-
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -205,8 +195,6 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-
-  t->sleep_ticks = 0;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -374,6 +362,13 @@ thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux)
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
+
+int pri_Calc(struct thread* t){
+        // t->priority = PRI_MAX - ()
+        return 1;
+}
+
+
 void
 thread_set_priority (int new_priority) 
 {
@@ -392,6 +387,11 @@ void
 thread_set_nice (int nice UNUSED) 
 {
   /* Not yet implemented. */
+        struct thread *t = thread_current();
+        t->nice = nice;
+        // recalcula a prioridade
+        t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (nice * 2);
+
 }
 
 /* Returns the current thread's nice value. */
@@ -399,9 +399,19 @@ int
 thread_get_nice (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
+float_type avg = 0;
+float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
+float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
+
+void avg_cal(){ 
+
+        // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) - t));
+        // avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)),  60));
+        avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)));
+}
 
 /* Returns 100 times the system load average. */
 int
@@ -413,12 +423,29 @@ thread_get_load_avg (void)
   return r;
 }
 
+// vai ser colocado no for para ele recalcular, tem que ta com a interrupção desabilitada
+void cpu_calc(struct thread *t, void *aux){
+        // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
+        if(t != idle_thread){
+                t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
+        }
+}
+
+void add_cpu(){// a cada tick ele aumenta o cpu time
+        struct thread *t = thread_current();
+        if(t != idle_thread){
+                t->recent_cpu_time = FLOAT_INT_ADD(t->recent_cpu_time, 1);
+        }
+}
+
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+        enum intr_level old_level = intr_disable();
+        int c = FLOAT_INT_ZERO(thread_current()->recent_cpu_time * 100);
+        intr_set_level(old_level);
+  return c;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -506,8 +533,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+
   t->priority = priority;
   t->sleep_time = 0;
+  t->recent_cpu_time = 0;
+  t->nice = 0;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();

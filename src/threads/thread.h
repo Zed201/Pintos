@@ -88,13 +88,14 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
+    uint8_t priority, nice;                       /* Priority e nice. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-   int64_t sleep_time;
+    uint64_t sleep_time;
+        int recent_cpu_time;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -102,8 +103,6 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-    int64_t sleep_ticks;
-    int iteration;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -116,7 +115,6 @@ static struct list block_list;
 void thread_init (void);
 void thread_start (void);
 
-void avg_cal();
 
 void thread_tick (void);
 void thread_print_stats (void);
@@ -148,6 +146,9 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux);
+void avg_cal();
+void add_cpu();
+void cpu_calc(struct thread *t, void *aux);
 
 void thread_yield_block(int sleep_time);
 void wake(int64_t ticks);
