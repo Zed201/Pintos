@@ -103,7 +103,6 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-    int64_t nice;
     int64_t sleep_ticks;
     int iteration;
   };
@@ -157,6 +156,7 @@ void thread_yield_block(int sleep_time);
 void wake(int64_t ticks);
 
 void init_ready_lists();
+size_t ready_list_size();
 
 // round_robin 
 void rr_add_ready(struct list_elem* elem);
@@ -167,6 +167,7 @@ struct list_elem *rr_pop_next_ready(void);
 void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);
+void update_priorities();
 
 // for handling multiple schedules
 void add_ready(struct list_elem* elem);

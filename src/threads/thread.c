@@ -150,8 +150,11 @@ thread_tick (void)
     kernel_ticks++;
    // ele faz a cada tick de relogico
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE)
+  if (++thread_ticks >= TIME_SLICE) {
+    if (thread_mlfqs)
+        update_priorities();
     intr_yield_on_return ();
+  }
   
 }
 
@@ -395,7 +398,7 @@ thread_set_nice (int nice UNUSED)
         struct thread *t = thread_current();
         t->nice = nice;
         // recalcula a prioridade
-        t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (nice * 2);
+        update_priorities();
 
 }
 
@@ -412,9 +415,9 @@ float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
 
 void avg_cal(){ 
 
-        // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) - t));
-        // avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)),  60));
-        avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(list_size(&ready_list) + (thread_current() != idle_thread)));
+        // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(ready_list_size() - t));
+        // avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)),  60));
+        avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)));
 }
 
 /* Returns 100 times the system load average. */
@@ -739,7 +742,22 @@ void init_ready_lists(void){
         list_init (&ready_list);
         break;
     default:
-    
+        break;
+    }
+}
+
+size_t ready_list_size() {
+    switch (thread_mlfqs)
+    {
+    case true:
+        size_t total = 0;
+        for (int i = 0; i <= PRI_MAX; i++) {
+            total += list_size(&ready_multi[i]);
+        }
+        return total;
+    case false:
+        return list_size(&ready_list);    
+    default:
         break;
     }
 }
@@ -750,9 +768,7 @@ void rr_add_ready(struct list_elem* elem) {
 }
 
 bool rr_ready_empty(void) {
-    list_empty(&ready_list);
-
-    return true;
+    return list_empty(&ready_list);
 }
 
 struct list_elem *rr_pop_next_ready(void) {
@@ -776,13 +792,59 @@ bool ml_ready_empty(void) {
 }
 
 struct list_elem *ml_pop_next_ready(void) {
-    for(int i = 0; i < PRI_MAX + 1; i++){
+    for(int i = PRI_MAX; i >= 0; i--){
         if(!list_empty(&ready_multi[i])){
             return list_pop_front(&ready_multi[i]);
         }
     }
 
     return NULL;
+}
+
+void update_priorities(void) {
+    struct list_elem *e;
+    struct thread *t;
+    struct list_elem *tmp = NULL;
+    struct list tmp_change;
+    list_init(&tmp_change);
+    enum intr_level old_level = intr_disable();
+    // falta atualizar os dados do processo antes
+
+    for(int i = PRI_MAX; i >= 0; i--){
+        for (e = list_begin(&ready_multi[i]); e != list_end(&ready_multi[i]); e = list_next(e)) {
+            if (tmp != NULL) {
+                tmp = list_remove(tmp);
+                list_push_back(&tmp_change, tmp); 
+            }
+
+            t = list_entry (e, struct thread, elem);
+            t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (t->nice * 2);
+            if (t->priority < PRI_MIN)
+                t->priority = PRI_MIN;
+            
+            if (t->priority > PRI_MAX)
+                t->priority = PRI_MAX;
+            
+            if (t->priority != i) {
+                tmp = e;
+            } else {
+                tmp = NULL;
+            }
+        }
+
+        if (tmp != NULL) {
+            tmp = list_remove(tmp);
+            list_push_back(&tmp_change, tmp); 
+        }
+    }
+
+    while (list_size(&tmp_change) != 0)
+    {
+        e = list_pop_back(&tmp_change);
+        t = list_entry (e, struct thread, elem);
+        list_push_back(&ready_multi[t->priority], e);
+    }
+    intr_set_level(old_level);
 }
 
 // for handling multiple schedules
