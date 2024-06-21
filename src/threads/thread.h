@@ -102,6 +102,7 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
     int64_t sleep_ticks;
+    int64_t nice;
     int iteration;
   };
 
@@ -148,4 +149,22 @@ bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux);
 
 void thread_yield_block(int sleep_time);
 void wake(int64_t ticks);
+
+void init_ready_lists();
+
+// round_robin 
+void rr_add_ready(struct list_elem* elem);
+bool rr_ready_empty(void);
+struct list_elem *rr_pop_next_ready(void);
+
+// mlfqs 
+void ml_add_ready(struct list_elem* elem);
+bool ml_ready_empty(void);
+struct list_elem *ml_pop_next_ready(void);
+
+// for handling multiple schedules
+void add_ready(struct list_elem* elem);
+bool ready_empty(void);
+struct list_elem *pop_next_ready(void);
+
 #endif /* threads/thread.h */

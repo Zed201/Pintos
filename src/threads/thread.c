@@ -29,6 +29,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// multi level queue 
+static struct list ready_multi[PRI_MAX + 1];
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -98,7 +101,7 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
-  list_init (&ready_list);
+  init_ready_lists();
   list_init (&all_list);
   list_init(&block_list);
 
@@ -252,7 +255,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
         //printf("status thread -> %d\n", t->status);
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  add_ready (&t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -323,7 +326,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    add_ready(&cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -366,7 +369,9 @@ thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+    if (!thread_mlfqs) {
+        thread_current ()->priority = new_priority;
+    }
 }
 
 /* Returns the current thread's priority. */
@@ -380,15 +385,15 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+    // TODO: update priority
+  thread_current()->nice = nice;
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 int avg = 0;
@@ -495,7 +500,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
+  if (!thread_mlfqs) {
+    t->priority = priority;
+  }
+  t->sleep_ticks = 0;
+  t->nice = 0;
   t->sleep_time = 0;
   t->magic = THREAD_MAGIC;
 
@@ -528,10 +537,10 @@ next_thread_to_run (void)
   if(!list_empty(&block_list)){
     wake(timer_ticks());
   }
-  if (list_empty (&ready_list))
+  if (ready_empty())
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    return list_entry (pop_next_ready(), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -655,29 +664,123 @@ void thread_yield_block(int sleep_time){
 
 void wake(int64_t ticks){
   
-  enum intr_level old_level;
-        old_level = intr_disable();
-        intr_set_level(old_level);
-        struct list_elem *e = list_begin(&block_list);
-        while(e != list_end(&block_list)){
-                struct thread *t = list_entry(e, struct thread, elem);
+    enum intr_level old_level;
+    old_level = intr_disable();
+    intr_set_level(old_level);
+    struct list_elem *e = list_begin(&block_list);
+    while(e != list_end(&block_list)){
+        struct thread *t = list_entry(e, struct thread, elem);
 
-                if(t->sleep_time <= ticks){
-                        old_level = intr_disable();
-                        list_pop_front(&block_list);
-                        //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
-                        thread_unblock(t);
-                        intr_set_level(old_level);
+        if(t->sleep_time <= ticks){
+            old_level = intr_disable();
+            list_pop_front(&block_list);
+            //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
+            thread_unblock(t);
+            intr_set_level(old_level);
 
-                        // unblock
-                        if(!list_empty(&block_list)){
-                                e = list_front(&block_list);
-                        } else {
-                                break;
-                        }
-                } else {
-                        break;
-                }
+            // unblock
+            if(!list_empty(&block_list)){
+                e = list_front(&block_list);
+            } else {
+                break;
+            }
+            } else {
+                break;
+            }
         }
 }
 
+void init_ready_lists(void){
+    switch (thread_mlfqs)
+    {
+    case true:
+        for(int i = 0; i < PRI_MAX + 1; i++){
+            list_init (&ready_multi[i]);
+        }
+        break;
+    case false:
+        list_init (&ready_list);
+        break;
+    default:
+    
+        break;
+    }
+}
+
+// round_robin
+void rr_add_ready(struct list_elem* elem) {
+    list_push_back(&ready_list, elem);
+}
+
+bool rr_ready_empty(void) {
+    list_empty(&ready_list);
+
+    return true;
+}
+
+struct list_elem *rr_pop_next_ready(void) {
+    return list_pop_front(&ready_list);
+}
+
+// multi level feedback queue
+void ml_add_ready(struct list_elem* elem) {
+    struct thread *t = list_entry(elem, struct thread, elem);
+    list_push_back(&ready_multi[t->priority], elem);
+}
+
+bool ml_ready_empty(void) {
+    for(int i = 0; i <= PRI_MAX; i++){
+        if(!list_empty(&ready_multi[i])){
+            return false;
+        }
+    }
+
+    return true;
+}
+
+struct list_elem *ml_pop_next_ready(void) {
+    for(int i = 0; i < PRI_MAX + 1; i++){
+        if(!list_empty(&ready_multi[i])){
+            return list_pop_front(&ready_multi[i]);
+        }
+    }
+
+    return NULL;
+}
+
+// for handling multiple schedules
+void add_ready(struct list_elem* elem) {
+    switch (thread_mlfqs)
+    {
+    case true:
+        return ml_add_ready(elem);
+    case false:
+        return rr_add_ready(elem);
+    default:
+        break;
+    }
+}
+
+bool ready_empty(void) {
+    switch (thread_mlfqs)
+    {
+    case true:
+        return ml_ready_empty();
+    case false:
+        return rr_ready_empty();
+    default:
+        break;
+    }
+}
+
+struct list_elem *pop_next_ready(void) {
+    switch (thread_mlfqs)
+    {
+    case true:
+        return ml_pop_next_ready();
+    case false:
+        return rr_pop_next_ready();
+    default:
+        return NULL;
+    }
+}
