@@ -52,12 +52,12 @@ O kernel não suporta float nem double, então a doc recomenda usar o formato de
     <summary>Tests</summary>
 
     
-- [X] FAIL tests/threads/alarm-single
-- [X] FAIL tests/threads/alarm-multiple
-- [X] FAIL tests/threads/alarm-simultaneous
+- [X] PASS tests/threads/alarm-single
+- [X] PASS tests/threads/alarm-multiple
+- [X] PASS tests/threads/alarm-simultaneous
 - [ ] FAIL tests/threads/alarm-priority
-- [X] pass tests/threads/alarm-zero
-- [X] pass tests/threads/alarm-negative
+- [X] PASS tests/threads/alarm-zero
+- [X] PASS tests/threads/alarm-negative
 - [ ] FAIL tests/threads/priority-change
 - [ ] FAIL tests/threads/priority-donate-one
 - [ ] FAIL tests/threads/priority-donate-multiple
@@ -70,12 +70,12 @@ O kernel não suporta float nem double, então a doc recomenda usar o formato de
 - [ ] FAIL tests/threads/priority-sema
 - [ ] FAIL tests/threads/priority-condvar
 - [ ] FAIL tests/threads/priority-donate-chain
-- [ ] FAIL tests/threads/mlfqs-load-1
-- [ ] FAIL tests/threads/mlfqs-load-60
-- [ ] FAIL tests/threads/mlfqs-load-avg
-- [ ] FAIL tests/threads/mlfqs-recent-1
-- [ ] FAIL tests/threads/mlfqs-fair-2
-- [ ] FAIL tests/threads/mlfqs-fair-20
+- [X] PASS tests/threads/mlfqs-load-1
+- [X] PASS tests/threads/mlfqs-load-60
+- [X] PASS tests/threads/mlfqs-load-avg
+- [X] PASS tests/threads/mlfqs-recent-1
+- [X] PASS tests/threads/mlfqs-fair-2
+- [X] PASS tests/threads/mlfqs-fair-20
 - [ ] FAIL tests/threads/mlfqs-nice-2
 - [ ] FAIL tests/threads/mlfqs-nice-10
 - [ ] FAIL tests/threads/mlfqs-block
