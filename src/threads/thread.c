@@ -390,7 +390,7 @@ thread_set_nice (int nice UNUSED)
         struct thread *t = thread_current();
         t->nice = nice;
         // recalcula a prioridade
-        t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (nice * 2);
+        t->priority = PRI_MAX - FLOAT_INT_ROUND(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (nice * 2);
 
 }
 
@@ -418,7 +418,7 @@ int
 thread_get_load_avg (void) 
 { 
         enum intr_level old_level = intr_disable();
-        int r =  FLOAT_INT_ZERO(avg * 100);
+        int r =  FLOAT_INT_ROUND(avg * 100);
         intr_set_level(old_level);
   return r;
 }
@@ -443,7 +443,7 @@ int
 thread_get_recent_cpu (void) 
 {
         enum intr_level old_level = intr_disable();
-        int c = FLOAT_INT_ZERO(thread_current()->recent_cpu_time * 100);
+        int c = FLOAT_INT_ROUND(thread_current()->recent_cpu_time * 100);
         intr_set_level(old_level);
   return c;
 }
