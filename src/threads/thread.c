@@ -151,8 +151,8 @@ thread_tick (void)
    // ele faz a cada tick de relogico
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE) {
-    if (thread_mlfqs)
-        update_priorities();
+    // if (thread_mlfqs)
+    //     update_priorities();
     intr_yield_on_return ();
   }
   
@@ -398,7 +398,9 @@ thread_set_nice (int nice UNUSED)
         struct thread *t = thread_current();
         t->nice = nice;
         // recalcula a prioridade
-        update_priorities();
+        // update_priorities();
+        // t->priority = PRI_MAX - FLOAT_INT_ROUND(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (nice * 2);
+
 
 }
 
@@ -425,7 +427,7 @@ int
 thread_get_load_avg (void) 
 { 
         enum intr_level old_level = intr_disable();
-        int r =  FLOAT_INT_ZERO(avg * 100);
+        int r =  FLOAT_INT_ROUND(avg * 100);
         intr_set_level(old_level);
   return r;
 }
@@ -450,7 +452,7 @@ int
 thread_get_recent_cpu (void) 
 {
         enum intr_level old_level = intr_disable();
-        int c = FLOAT_INT_ZERO(thread_current()->recent_cpu_time * 100);
+        int c = FLOAT_INT_ROUND(thread_current()->recent_cpu_time * 100);
         intr_set_level(old_level);
   return c;
 }
@@ -524,7 +526,7 @@ is_thread (struct thread *t)
 {
   return t != NULL && t->magic == THREAD_MAGIC;
 }
-
+int p = 5;
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
@@ -540,9 +542,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  if (!thread_mlfqs) {
-    t->priority = priority;
-  }  
+  // t->priority = priority;
+  t->priority = p;
+        p =  p + 5;
+   
   t->sleep_time = 0;
   t->recent_cpu_time = 0;
   t->nice = 0;
@@ -801,6 +804,33 @@ struct list_elem *ml_pop_next_ready(void) {
     return NULL;
 }
 
+void pri_up(struct thread *t, void *aux){
+        if(t != idle_thread){
+                list_remove(&t->elem);
+                t->priority = PRI_MAX - FLOAT_INT_ROUND(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (t->nice * 2);
+                printf("%s-%d\n", t->name, t->priority);
+                // if(thread_mlfqs){
+                //         list_push_back(&ready_multi[t->priority], &t->elem);
+                // } else {
+                //         list_push_back(&ready_list, &t->elem);
+                // }
+        }
+       //  if(t == idle_ticks){
+       //          t->priority = 0;
+       //          return;
+       //  }
+       // int p_tmp = t->priority; 
+       //  // printf("vai ver %s\n", t->name);
+        // list_remove(&t->allelem);
+               //  // problema é remover da lista certa, no nice-10 ele da erro em assert
+
+       //          // printf("n pri de %s - %d\n", t->name, t->priority);
+       //          // list_remove(&t->elem); // dando erro aqui
+       //          // t->elem.prev->next = t->elem.next;
+       //          // t->elem.next->prev = t->elem.prev;
+       //          // add_ready(&t->elem);
+}
+// vai ser chamada a cada 4 ticks, basicamente no timer.c, so vai desabilidtar a interrupção e chamar o foreach
 void update_priorities(void) {
     struct list_elem *e;
     struct thread *t;
@@ -809,41 +839,52 @@ void update_priorities(void) {
     list_init(&tmp_change);
     enum intr_level old_level = intr_disable();
     // falta atualizar os dados do processo antes
-
+        // usar foreach
+        // printf("------all\n");
+        // thread_foreach(print_up, NULL);
+        // thread_foreach(pri_up, NULL);
+        // printf("------\n");
     for(int i = PRI_MAX; i >= 0; i--){
-        for (e = list_begin(&ready_multi[i]); e != list_end(&ready_multi[i]); e = list_next(e)) {
-            if (tmp != NULL) {
-                tmp = list_remove(tmp);
-                list_push_back(&tmp_change, tmp); 
-            }
+                while(!list_empty(&ready_multi[i])){
+                        tmp = list_pop_front(&ready_multi[i]);
+                        list_push_back(&tmp_change, tmp);
+                }
+        // for (e = list_begin(&ready_multi[i]); e != list_end(&ready_multi[i]); e = list_next(e)) {
+        //     if (tmp != NULL) {
+        //         tmp = list_remove(tmp);
+        //         list_push_back(&tmp_change, tmp); 
+        //     }
 
-            t = list_entry (e, struct thread, elem);
-            t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (t->nice * 2);
-            if (t->priority < PRI_MIN)
-                t->priority = PRI_MIN;
-            
-            if (t->priority > PRI_MAX)
-                t->priority = PRI_MAX;
-            
-            if (t->priority != i) {
-                tmp = e;
-            } else {
-                tmp = NULL;
-            }
-        }
+        //     t = list_entry (e, struct thread, elem);
+        //     t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (t->nice * 2);
+        //     if (t->priority < PRI_MIN)
+        //         t->priority = PRI_MIN;
+        //     
+        //     if (t->priority > PRI_MAX)
+        //         t->priority = PRI_MAX;
+        //     
+        //     if (t->priority != i) {
+        //         tmp = e;
+        //     } else {
+        //         tmp = NULL;
+        //     }
+        // }
 
-        if (tmp != NULL) {
-            tmp = list_remove(tmp);
-            list_push_back(&tmp_change, tmp); 
-        }
+        // if (tmp != NULL) {
+        //     tmp = list_remove(tmp);
+        //     list_push_back(&tmp_change, tmp); 
+        // }
     }
-
+        printf("--------\n");
     while (list_size(&tmp_change) != 0)
     {
         e = list_pop_back(&tmp_change);
         t = list_entry (e, struct thread, elem);
+        t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (t->nice * 2);
+        printf("%s-%d\n", t->name, t->priority);
         list_push_back(&ready_multi[t->priority], e);
     }
+     
     intr_set_level(old_level);
 }
 

@@ -183,7 +183,12 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_tick ();
         if(thread_mlfqs){
                 add_cpu();
-                if(timer_ticks() % TIMER_FREQ == 0){
+                if(timer_ticks() % 30 == 0){ // a acada 4 ticks
+                        // printf("qarto tick\n");
+                        update_priorities();
+
+                }
+                if(timer_ticks() % TIMER_FREQ == 0){ // a cada segundo
                         avg_cal();
                         enum intr_level old_level = intr_disable();
                         thread_foreach(cpu_calc, NULL);
