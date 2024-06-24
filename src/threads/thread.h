@@ -88,14 +88,18 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int8_t priority, nice;              /* Priority e nice. */
+    int8_t priority;                    /* Priority */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    //////////////////////////////
     uint64_t sleep_time;
-        int recent_cpu_time;
+    int recent_cpu_time;
+    int nice;
+    //////////////////////////////
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -138,9 +142,9 @@ void thread_foreach (thread_action_func *, void *);
 /* Para debugar por qualquer list */
 void thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux);
 
+//////////////////////////////
 int thread_get_priority (void);
 void thread_set_priority (int);
-
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
@@ -149,7 +153,8 @@ bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux);
 void avg_cal();
 void add_cpu();
 void cpu_calc(struct thread *t, void *aux);
-
 void thread_yield_block(int sleep_time);
 void wake(int64_t ticks);
+//////////////////////////////
+
 #endif /* threads/thread.h */

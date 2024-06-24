@@ -17,8 +17,7 @@ static const struct test tests[] =
     {"alarm-priority", test_alarm_priority},
     {"alarm-zero", test_alarm_zero},
     {"alarm-negative", test_alarm_negative},
-    // so para ele testar os de alarm
-    /*{"priority-change", test_priority_change},
+    {"priority-change", test_priority_change},
     {"priority-donate-one", test_priority_donate_one},
     {"priority-donate-multiple", test_priority_donate_multiple},
     {"priority-donate-multiple2", test_priority_donate_multiple2},
@@ -38,7 +37,7 @@ static const struct test tests[] =
     {"mlfqs-fair-20", test_mlfqs_fair_20},
     {"mlfqs-nice-2", test_mlfqs_nice_2},
     {"mlfqs-nice-10", test_mlfqs_nice_10},
-    {"mlfqs-block", test_mlfqs_block},*/
+    {"mlfqs-block", test_mlfqs_block},
   };
 
 static const char *test_name;
