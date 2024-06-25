@@ -88,14 +88,14 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    uint8_t priority, nice;                       /* Priority e nice. */
+    int8_t priority, nice;                       /* Priority e nice. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
     uint64_t sleep_time;
-        int recent_cpu_time;
+    int recent_cpu_time;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -111,8 +111,9 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-
 static struct list block_list;
+
+static float_type avg = 0;
 
 void thread_init (void);
 void thread_start (void);
@@ -164,6 +165,7 @@ bool rr_ready_empty(void);
 struct list_elem *rr_pop_next_ready(void);
 
 // mlfqs 
+void print_mlfqs(void);
 void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);

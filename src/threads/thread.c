@@ -133,26 +133,36 @@ thread_start (void)
    Thus, this function runs in an external interrupt context. */
 void
 thread_tick (void) 
-{
-       
+{  
   struct thread *t = thread_current ();
-        //  if(timer_ticks() % TIMER_FREQ == 0) {
-        //        avg = avg_cal(t == idle_thread);
-        // }
+    
+    if(thread_mlfqs){
+      add_cpu();
+      if(timer_ticks() % TIMER_FREQ == 0){
+        avg_cal();
+        enum intr_level old_level = intr_disable();
+        thread_foreach(cpu_calc, NULL);
+        intr_set_level(old_level);
+      }
+
+    }
+
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
+
 #ifdef USERPROG
   else if (t->pagedir != NULL)
     user_ticks++;
 #endif
   else
     kernel_ticks++;
-   // ele faz a cada tick de relogico
+   
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE) {
-    if (thread_mlfqs)
-        update_priorities();
+    if (thread_mlfqs){
+      update_priorities();
+    }
     intr_yield_on_return ();
   }
   
@@ -367,20 +377,12 @@ thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux)
     }
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
-
-int pri_Calc(struct thread* t){
-        // t->priority = PRI_MAX - ()
-        return 1;
-}
-
-
 void
 thread_set_priority (int new_priority) 
 {
-    if (!thread_mlfqs) {
-        thread_current ()->priority = new_priority;
-    }
+  if (!thread_mlfqs) {
+    thread_current ()->priority = new_priority;
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -394,11 +396,22 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
-        struct thread *t = thread_current();
-        t->nice = nice;
-        // recalcula a prioridade
-        update_priorities();
+  struct thread *t = thread_current();
+  enum intr_level old_level;
+  
+  t->nice = nice;
+  // recalcula a prioridade
+  int8_t actual_priority = t->nice;
+  update_priorities();
+
+  if (t->nice != actual_priority) {
+    old_level = intr_disable ();
+    if (t != idle_thread) 
+        add_ready(&t->elem);
+    t->status = THREAD_READY;
+    schedule ();
+    intr_set_level (old_level);
+  }
 
 }
 
@@ -409,49 +422,47 @@ thread_get_nice (void)
   return thread_current()->nice;
 }
 
-float_type avg = 0;
-float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
-float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
-
 void avg_cal(){ 
+  float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
+  float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
 
-        // return FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(ready_list_size() - t));
-        // avg = FLOAT_ADD(FLOAT_INT_DIV(FLOAT_INT_MUL(avg, 59), 60), FLOAT_INT_DIV(INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)),  60));
-        avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)));
+  avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)));
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 { 
-        enum intr_level old_level = intr_disable();
-        int r =  FLOAT_INT_ZERO(avg * 100);
-        intr_set_level(old_level);
+  enum intr_level old_level = intr_disable();
+  int r =  FLOAT_INT_ROUND(avg * 100);
+  intr_set_level(old_level);
+
   return r;
 }
 
 // vai ser colocado no for para ele recalcular, tem que ta com a interrupção desabilitada
-void cpu_calc(struct thread *t, void *aux){
-        // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
-        if(t != idle_thread){
-                t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
-        }
+void    cpu_calc(struct thread *t, void *aux){
+  // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
+  if(t != idle_thread){
+    t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
+  }
 }
 
 void add_cpu(){// a cada tick ele aumenta o cpu time
-        struct thread *t = thread_current();
-        if(t != idle_thread){
-                t->recent_cpu_time = FLOAT_INT_ADD(t->recent_cpu_time, 1);
-        }
+  struct thread *t = thread_current();
+  if(t != idle_thread){
+          t->recent_cpu_time = FLOAT_INT_ADD(t->recent_cpu_time, 1);
+  }
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-        enum intr_level old_level = intr_disable();
-        int c = FLOAT_INT_ZERO(thread_current()->recent_cpu_time * 100);
-        intr_set_level(old_level);
+  enum intr_level old_level = intr_disable();
+  int c = FLOAT_INT_ROUND(thread_current()->recent_cpu_time * 100);
+  intr_set_level(old_level);
+  
   return c;
 }
 
@@ -542,7 +553,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   if (!thread_mlfqs) {
     t->priority = priority;
-  }  
+  }
+  else {
+    t->priority = PRI_MAX;
+  }
   t->sleep_time = 0;
   t->recent_cpu_time = 0;
   t->nice = 0;
@@ -577,6 +591,7 @@ next_thread_to_run (void)
   if(!list_empty(&block_list)){
     wake(timer_ticks());
   }
+
   if (ready_empty())
     return idle_thread;
   else
@@ -704,182 +719,220 @@ void thread_yield_block(int sleep_time){
 
 void wake(int64_t ticks){
   
-    enum intr_level old_level;
-    old_level = intr_disable();
-    intr_set_level(old_level);
-    struct list_elem *e = list_begin(&block_list);
-    while(e != list_end(&block_list)){
-        struct thread *t = list_entry(e, struct thread, elem);
+  enum intr_level old_level;
+  old_level = intr_disable();
+  intr_set_level(old_level);
+  struct list_elem *e = list_begin(&block_list);
+  while(e != list_end(&block_list)){
+    struct thread *t = list_entry(e, struct thread, elem);
 
-        if(t->sleep_time <= ticks){
-            old_level = intr_disable();
-            list_pop_front(&block_list);
-            //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
-            thread_unblock(t);
-            intr_set_level(old_level);
+    if(t->sleep_time <= ticks){
+      old_level = intr_disable();
+      list_pop_front(&block_list);
+      //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
+      thread_unblock(t);
+      intr_set_level(old_level);
 
-            // unblock
-            if(!list_empty(&block_list)){
-                e = list_front(&block_list);
-            } else {
-                break;
-            }
-            } else {
-                break;
-            }
-        }
+      // unblock
+      if(!list_empty(&block_list)){
+        e = list_front(&block_list);
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
 }
 
 void init_ready_lists(void){
-    switch (thread_mlfqs)
-    {
-    case true:
-        for(int i = 0; i < PRI_MAX + 1; i++){
-            list_init (&ready_multi[i]);
-        }
-        break;
-    case false:
-        list_init (&ready_list);
-        break;
-    default:
-        break;
+  switch (thread_mlfqs)
+  {
+  case true:
+    for(int i = 0; i < PRI_MAX + 1; i++){
+        list_init (&ready_multi[i]);
     }
+    break;
+  case false:
+    list_init (&ready_list);
+    break;
+  default:
+    break;
+  }
 }
 
 size_t ready_list_size() {
-    switch (thread_mlfqs)
-    {
-    case true:
-        size_t total = 0;
-        for (int i = 0; i <= PRI_MAX; i++) {
-            total += list_size(&ready_multi[i]);
-        }
-        return total;
-    case false:
-        return list_size(&ready_list);    
-    default:
-        break;
+  switch (thread_mlfqs)
+  {
+  case true:
+    size_t total = 0;
+    for (int i = 0; i <= PRI_MAX; i++) {
+        total += list_size(&ready_multi[i]);
     }
+    return total;
+  case false:
+    return list_size(&ready_list);    
+  default:
+    break;
+  }
 }
 
 // round_robin
 void rr_add_ready(struct list_elem* elem) {
-    list_push_back(&ready_list, elem);
+  list_push_back(&ready_list, elem);
 }
 
 bool rr_ready_empty(void) {
-    return list_empty(&ready_list);
+  return list_empty(&ready_list);
 }
 
 struct list_elem *rr_pop_next_ready(void) {
-    return list_pop_front(&ready_list);
+  return list_pop_front(&ready_list);
 }
 
 // multi level feedback queue
 void ml_add_ready(struct list_elem* elem) {
-    struct thread *t = list_entry(elem, struct thread, elem);
-    list_push_back(&ready_multi[t->priority], elem);
+  struct thread *t = list_entry(elem, struct thread, elem);
+  list_push_back(&ready_multi[(int) t->priority], elem);
 }
 
 bool ml_ready_empty(void) {
-    for(int i = 0; i <= PRI_MAX; i++){
-        if(!list_empty(&ready_multi[i])){
-            return false;
-        }
+  for(int i = 0; i <= PRI_MAX; i++){
+    if(!list_empty(&ready_multi[i])){
+        return false;
     }
+  }
 
-    return true;
+  return true;
 }
 
 struct list_elem *ml_pop_next_ready(void) {
-    for(int i = PRI_MAX; i >= 0; i--){
-        if(!list_empty(&ready_multi[i])){
-            return list_pop_front(&ready_multi[i]);
-        }
+  for(int i = PRI_MAX; i >= 0; i--){
+    if(!list_empty(&(ready_multi[i]))){
+        return list_pop_front(&(ready_multi[i]));
     }
+  }
 
-    return NULL;
+  return NULL;
+}
+
+void print_mlfqs(void) {
+  printf("MLFQS----\n");
+  
+  for (int i = PRI_MAX; i >= 0; i--) {
+    printf("Priority %d, size %d\n", i, list_size(&ready_multi[i]));
+    struct list_elem *e;
+    bool p_newline = false;
+    for (e = list_begin(&ready_multi[i]); e != list_end(&ready_multi[i]); e = list_next(e)) {
+      struct thread *t = list_entry(e, struct thread, elem);
+      printf("Thread %s | ", t->name);
+      p_newline = true;
+    }
+    if (p_newline)
+      printf("\n");
+  }
+}
+
+void update_priority(struct thread *t) {
+  if (t == idle_thread) {
+    return;
+  }
+
+  t->priority = ((int8_t) PRI_MAX) - (int8_t) (((int64_t) FLOAT_INT_ZERO(t->recent_cpu_time)) / ((int64_t) 4)) 
+                                    - (int8_t) (((int64_t) 2) * ((int64_t) t->nice));
+  
+  if (t->priority < PRI_MIN)
+    t->priority = PRI_MIN;
+  
+  if (t->priority > PRI_MAX)
+    t->priority = PRI_MAX;
+
 }
 
 void update_priorities(void) {
-    struct list_elem *e;
-    struct thread *t;
-    struct list_elem *tmp = NULL;
-    struct list tmp_change;
-    list_init(&tmp_change);
-    enum intr_level old_level = intr_disable();
-    // falta atualizar os dados do processo antes
+  struct list_elem *e;
+  struct thread *t;
+  struct list_elem *tmp = NULL;
+  struct list tmp_change;
+  list_init(&tmp_change);
+  enum intr_level old_level = intr_disable();
 
-    for(int i = PRI_MAX; i >= 0; i--){
-        for (e = list_begin(&ready_multi[i]); e != list_end(&ready_multi[i]); e = list_next(e)) {
-            if (tmp != NULL) {
-                tmp = list_remove(tmp);
-                list_push_back(&tmp_change, tmp); 
-            }
+  // for current thread
+  if (thread_current() != idle_thread) {
+    update_priority(thread_current());
+  }
 
-            t = list_entry (e, struct thread, elem);
-            t->priority = PRI_MAX - FLOAT_INT_ZERO(FLOAT_INT_DIV(t->recent_cpu_time, 4)) - (t->nice * 2);
-            if (t->priority < PRI_MIN)
-                t->priority = PRI_MIN;
-            
-            if (t->priority > PRI_MAX)
-                t->priority = PRI_MAX;
-            
-            if (t->priority != i) {
-                tmp = e;
-            } else {
-                tmp = NULL;
-            }
-        }
+  // for ready list
+  for(int i = PRI_MAX; i >= 0; i--){
+    e = list_begin(&ready_multi[i]);
+    while (e != list_end(&ready_multi[i])) {
+      t = list_entry (e, struct thread, elem);
 
-        if (tmp != NULL) {
-            tmp = list_remove(tmp);
-            list_push_back(&tmp_change, tmp); 
-        }
+      if (t == idle_thread) {
+        continue;
+      }
+
+      update_priority(t);
+
+      if (t->priority != i) {
+        tmp = e;
+        e = list_remove(e);
+        list_push_back(&tmp_change, tmp);
+      }
+      else {
+        e = list_next(e);
+      }
     }
+  }
 
-    while (list_size(&tmp_change) != 0)
-    {
-        e = list_pop_back(&tmp_change);
-        t = list_entry (e, struct thread, elem);
-        list_push_back(&ready_multi[t->priority], e);
-    }
-    intr_set_level(old_level);
+  // for blocked list
+  for (e = list_begin(&block_list); e != list_end(&block_list); e = list_next(e)) {
+    t = list_entry (e, struct thread, elem);
+    update_priority(t);
+  }
+
+  while (list_size(&tmp_change) != 0)
+  {
+    e = list_pop_front(&tmp_change);
+    t = list_entry (e, struct thread, elem);
+    list_push_back(&ready_multi[(int) t->priority], e);
+  }
+  intr_set_level(old_level);
 }
 
 // for handling multiple schedules
 void add_ready(struct list_elem* elem) {
-    switch (thread_mlfqs)
-    {
-    case true:
-        return ml_add_ready(elem);
-    case false:
-        return rr_add_ready(elem);
-    default:
-        break;
-    }
+  switch (thread_mlfqs)
+  {
+  case true:
+    return ml_add_ready(elem);
+  case false:
+    return rr_add_ready(elem);
+  default:
+    break;
+  }
 }
 
 bool ready_empty(void) {
-    switch (thread_mlfqs)
-    {
-    case true:
-        return ml_ready_empty();
-    case false:
-        return rr_ready_empty();
-    default:
-        break;
-    }
+  switch (thread_mlfqs)
+  {
+  case true:
+    return ml_ready_empty();
+  case false:
+    return rr_ready_empty();
+  default:
+    break;
+  }
 }
 
 struct list_elem *pop_next_ready(void) {
-    switch (thread_mlfqs)
-    {
-    case true:
-        return ml_pop_next_ready();
-    case false:
-        return rr_pop_next_ready();
-    default:
-        return NULL;
-    }
+  switch (thread_mlfqs)
+  {
+  case true:
+    return ml_pop_next_ready();
+  case false:
+    return rr_pop_next_ready();
+  default:
+    return NULL;
+  }
 }

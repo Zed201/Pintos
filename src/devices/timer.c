@@ -181,19 +181,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-        if(thread_mlfqs){
-                add_cpu();
-                if(timer_ticks() % TIMER_FREQ == 0){
-                        avg_cal();
-                        enum intr_level old_level = intr_disable();
-                        thread_foreach(cpu_calc, NULL);
-                        intr_set_level(old_level);
-                }
-
-        }
-          //printf("\ntick: %lld", timer_ticks());
-  //wake(timer_ticks()); // também faz a cada tick de relogico basicamente
- 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -226,7 +213,7 @@ static void NO_INLINE
 busy_wait (int64_t loops) 
 {
   while (loops-- > 0)
-    barrier ();
+  barrier ();
 }
 
 /* Sleep for approximately NUM/DENOM seconds. */

@@ -17,8 +17,7 @@ static const struct test tests[] =
     {"alarm-priority", test_alarm_priority},
     {"alarm-zero", test_alarm_zero},
     {"alarm-negative", test_alarm_negative},
-    // so para ele testar os de alarm
-    /*{"priority-change", test_priority_change},
+    {"priority-change", test_priority_change},
     {"priority-donate-one", test_priority_donate_one},
     {"priority-donate-multiple", test_priority_donate_multiple},
     {"priority-donate-multiple2", test_priority_donate_multiple2},
@@ -29,7 +28,7 @@ static const struct test tests[] =
     {"priority-fifo", test_priority_fifo},
     {"priority-preempt", test_priority_preempt},
     {"priority-sema", test_priority_sema},
-    {"priority-condvar", test_priority_condvar},*/
+    {"priority-condvar", test_priority_condvar},
     {"mlfqs-load-1", test_mlfqs_load_1},
     {"mlfqs-load-60", test_mlfqs_load_60},
     {"mlfqs-load-avg", test_mlfqs_load_avg},
