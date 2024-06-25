@@ -1,7 +1,7 @@
 include ../Makefile.kernel
 
 # os testes de mlfqs nao funciona pois da alfum erro que nao consegui contornar
-TEST=alarm-multiple
+TEST=mlfqs-load-avg
 
 ngui:
 # ../utils/pintos -v -k -T 60 $(SIMULATOR) -- run alarm-multiple 

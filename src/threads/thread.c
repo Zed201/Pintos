@@ -863,27 +863,28 @@ void update_priorities(void) {
   }
 
   // for ready list
-  for(int i = PRI_MAX; i >= 0; i--){
-    e = list_begin(&ready_multi[i]);
-    while (e != list_end(&ready_multi[i])) {
-      t = list_entry (e, struct thread, elem);
+    for(int i = PRI_MAX; i >= 0; i--){
+        e = list_begin(&ready_multi[i]);
+        while (e != list_end(&ready_multi[i])) {
+            t = list_entry (e, struct thread, elem);
 
-      if (t == idle_thread) {
-        continue;
-      }
+            if (t != idle_thread) {
+                //continue;
 
-      update_priority(t);
 
-      if (t->priority != i) {
-        tmp = e;
-        e = list_remove(e);
-        list_push_back(&tmp_change, tmp);
-      }
-      else {
-        e = list_next(e);
-      }
+                update_priority(t);
+
+                if (t->priority != i) {
+                    tmp = e;
+                    e = list_remove(e);
+                    list_push_back(&tmp_change, tmp);
+                }
+                else {
+                    e = list_next(e);
+                }
+            }
+        }
     }
-  }
 
   // for blocked list
   for (e = list_begin(&block_list); e != list_end(&block_list); e = list_next(e)) {
