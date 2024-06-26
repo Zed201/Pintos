@@ -170,6 +170,7 @@ bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);
 void update_priorities();
 void update_priority(struct thread *t);
+int max_current_pri();
 // for handling multiple schedules
 void add_ready(struct list_elem* elem);
 bool ready_empty(void);

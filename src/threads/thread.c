@@ -145,7 +145,7 @@ thread_tick (void)
         thread_foreach(cpu_calc, NULL);
         // colocar o update priorities aqui ele nao trava, mas também nao passa
       }
-      if(timer_ticks() % 5 == 0){ // tempo de 50 ele erra // block passando e os nice nao pegando
+      if(timer_ticks() % 4 == 0){ // tempo de 50 ele erra // block passando e os nice nao pegando
         update_priorities();
       }
       //printf("Chamado por %s Demorou %d ---- %d\n", t->name, timer_ticks(), abc);
@@ -403,6 +403,13 @@ thread_set_nice (int nice UNUSED)
   
   t->nice = nice;
   update_priority(t);
+    if(thread_mlfqs && t != idle_thread){
+        // old_level = intr_disable();
+        if(t->priority < max_current_pri()){
+                thread_yield();    
+        }
+        // intr_set_level(old_level);
+    }
   // recalcula a prioridade
   // int8_t actual_priority = t->nice;
   // update_priorities();
@@ -545,26 +552,37 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
-  enum intr_level old_level;
+    enum intr_level old_level;
 
-  ASSERT (t != NULL);
-  ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
-  ASSERT (name != NULL);
-
-  memset (t, 0, sizeof *t);
-  t->status = THREAD_BLOCKED;
-  strlcpy (t->name, name, sizeof t->name);
-  t->stack = (uint8_t *) t + PGSIZE;
-  if (!thread_mlfqs) {
-    t->priority = priority;
-  }
-  else {
-    t->priority = PRI_MAX;
-  }
-  t->sleep_time = 0;
-  t->recent_cpu_time = 0;
-  t->nice = 0;
-  t->magic = THREAD_MAGIC;
+    ASSERT (t != NULL);
+    ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
+    ASSERT (name != NULL);
+    // struct thread* y = thread_current();
+    // struct thread* y = thread_current();
+    memset (t, 0, sizeof *t);
+    t->status = THREAD_BLOCKED;
+    strlcpy (t->name, name, sizeof t->name);
+    t->stack = (uint8_t *) t + PGSIZE;
+    // if (!thread_mlfqs) {
+    //   t->priority = priority;
+    // }
+    // else {
+    //   t->priority = PRI_MAX;
+    // }
+    t->sleep_time = 0;
+    t->magic = THREAD_MAGIC;
+    // t->recent_cpu_time = 0; // se nao iniciar com zero nao passa no nice2
+    // t->nice = 0;
+    if(t != initial_thread){
+        struct thread* y = thread_current();
+        t->recent_cpu_time = y->recent_cpu_time;
+        t->nice = y->nice;
+        update_priority(t);
+    } else {
+        t->recent_cpu_time = 0;
+        t->nice = 0;
+    }
+  
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -906,4 +924,13 @@ struct list_elem *pop_next_ready(void) {
   default:
     return NULL;
   }
+}
+
+int max_current_pri(){
+    for(int i = PRI_MAX; i >= 0; i--){
+        if(!list_empty(&ready_multi[i])){
+            return i;
+        }
+    }
+    return 0;
 }
