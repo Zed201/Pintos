@@ -850,7 +850,7 @@ void update_priority(struct thread *t) {
 }
 
 void up_for(struct thread* t, void* aux){
-  if(t != idle_thread && t != thread_current()){
+  if( t->status != THREAD_BLOCKED && t != idle_thread && t != thread_current()){
     int i = t->priority;
     update_priority(t);
     if(t->priority != i){
