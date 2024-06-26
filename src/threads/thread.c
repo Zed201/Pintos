@@ -452,9 +452,10 @@ thread_get_load_avg (void)
 void cpu_calc(struct thread *t, void *aux){
   // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
   if(t != idle_thread){
-        float_type m = FLOAT_DIV(2 * avg, FLOAT_INT_ADD(2 * avg, 1));
+        float_type m1 = FLOAT_INT_ADD(2 * avg, 1);
+        float_type m2 = FLOAT_DIV(2 * avg, m1);
     //t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
-    t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, m) + t->nice;
+    t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, m2) + t->nice;
 
   }
 }
@@ -581,6 +582,7 @@ init_thread (struct thread *t, const char *name, int priority)
     } else {
         t->recent_cpu_time = 0;
         t->nice = 0;
+        t->priority = priority;
     }
   
 
