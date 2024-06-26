@@ -425,22 +425,20 @@ thread_get_nice (void)
   return thread_current()->nice;
 }
 
-void avg_cal(){ 
-  float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
-  float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
+float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
+float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
 
-  avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)));
+void avg_cal(){  
+  // int c = (ready_list_size() + (thread_current() != idle_thread);
+  int c = list_size(&all_list) - list_size(&block_list) - 1;
+  avg = FLOAT_MUL(a, avg) + FLOAT_MUL(b, INT_FLOAT(c));
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 { 
-  //enum intr_level old_level = intr_disable();
-   
-  //intr_set_level(old_level);
-  //printf("Chamou\n");
-  return  FLOAT_INT_ROUND(avg * 100);
+  return  FLOAT_INT_ZERO(avg * 100);
 }
 
 // vai ser colocado no for para ele recalcular, tem que ta com a interrupção desabilitada
@@ -465,9 +463,9 @@ void add_cpu(){// a cada tick ele aumenta o cpu time
 int
 thread_get_recent_cpu (void) 
 {
-  enum intr_level old_level = intr_disable();
+  // enum intr_level old_level = intr_disable();
   int c = FLOAT_INT_ROUND(thread_current()->recent_cpu_time * 100);
-  intr_set_level(old_level);
+  // intr_set_level(old_level);
   
   return c;
 }
@@ -726,8 +724,6 @@ void thread_yield_block(int sleep_time){
 void wake(int64_t ticks){
   
   enum intr_level old_level;
-  old_level = intr_disable();
-  intr_set_level(old_level);
   struct list_elem *e = list_begin(&block_list);
   while(e != list_end(&block_list)){
     struct thread *t = list_entry(e, struct thread, elem);
@@ -768,19 +764,20 @@ void init_ready_lists(void){
 }
 
 size_t ready_list_size() {
-  switch (thread_mlfqs)
-  {
-  case true:
-    size_t total = 0;
-    for (int i = 0; i <= PRI_MAX; i++) {
-        total += list_size(&ready_multi[i]);
-    }
-    return total;
-  case false:
-    return list_size(&ready_list);    
-  default:
-    break;
-  }
+  // switch (thread_mlfqs)
+  // {
+  // case true:
+  //   size_t total = 0;
+  //   for (int i = 0; i <= PRI_MAX; i++) {
+  //       total += list_size(&ready_multi[i]);
+  //   }
+  //   return total;
+  // case false:
+  //   return list_size(&ready_list);    
+  // default:
+  //   break;
+  // }
+  return list_size(&all_list) - list_size(&block_list) - 1;
 }
 
 // round_robin
@@ -840,8 +837,8 @@ void print_mlfqs(void) {
 }
 
 void update_priority(struct thread *t) {
-  t->priority = ((int8_t) PRI_MAX) - (int8_t) (((int64_t) FLOAT_INT_ROUND(t->recent_cpu_time)) / ((int64_t) 4)) 
-                                    - (int8_t) (((int64_t) 2) * ((int64_t) t->nice));
+  t->priority = (PRI_MAX) - (( FLOAT_INT_ROUND(t->recent_cpu_time)) / ( 4)) 
+                                    - ((2) * (t->nice));
   
   if (t->priority < PRI_MIN)
     t->priority = PRI_MIN;
@@ -857,7 +854,8 @@ void up_for(struct thread* t, void* aux){
     update_priority(t);
     if(t->priority != i){
       list_remove(&t->elem);
-      add_ready(&t->elem);
+      //add_ready(&t->elem);
+      list_push_back(&ready_multi[t->priority], &t->elem);
     }
   }
 }
