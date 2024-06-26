@@ -126,7 +126,6 @@ void
 test_mlfqs_load_avg (void) 
 {
   int i;
-  
   ASSERT (thread_mlfqs);
 
   start_time = timer_ticks ();
@@ -147,6 +146,7 @@ test_mlfqs_load_avg (void)
       int load_avg;
       timer_sleep (sleep_until - timer_ticks ());
       load_avg = thread_get_load_avg ();
+      //printf("Chamado por %s\n", thread_current()->name);
       msg ("After %d seconds, load average=%d.%02d.",
            i * 2, load_avg / 100, load_avg % 100);
     }
