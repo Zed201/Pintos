@@ -145,7 +145,7 @@ thread_tick (void)
         thread_foreach(cpu_calc, NULL);
         // colocar o update priorities aqui ele nao trava, mas também nao passa
       }
-      if(timer_ticks() % 37 == 0){ // tempo de 50 ele erra // block passando e os nice nao pegando
+      if(timer_ticks() % 5 == 0){ // tempo de 50 ele erra // block passando e os nice nao pegando
         update_priorities();
       }
       //printf("Chamado por %s Demorou %d ---- %d\n", t->name, timer_ticks(), abc);
@@ -402,18 +402,19 @@ thread_set_nice (int nice UNUSED)
   enum intr_level old_level;
   
   t->nice = nice;
+  update_priority(t);
   // recalcula a prioridade
-  int8_t actual_priority = t->nice;
-  update_priorities();
+  // int8_t actual_priority = t->nice;
+  // update_priorities();
 
-  if (t->nice != actual_priority) {
-    old_level = intr_disable ();
-    if (t != idle_thread) 
-        add_ready(&t->elem);
-    t->status = THREAD_READY;
-    schedule ();
-    intr_set_level (old_level);
-  }
+  // if (t->nice != actual_priority) {
+  //   old_level = intr_disable ();
+  //   if (t != idle_thread) 
+  //       add_ready(&t->elem);
+  //   t->status = THREAD_READY;
+  //   schedule ();
+  //   intr_set_level (old_level);
+  // }
 
 }
 
@@ -443,10 +444,13 @@ thread_get_load_avg (void)
 }
 
 // vai ser colocado no for para ele recalcular, tem que ta com a interrupção desabilitada
-void    cpu_calc(struct thread *t, void *aux){
+void cpu_calc(struct thread *t, void *aux){
   // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
   if(t != idle_thread){
-    t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
+        float_type m = FLOAT_DIV(2 * avg, FLOAT_INT_ADD(2 * avg, 1));
+    //t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
+    t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, m) + t->nice;
+
   }
 }
 
@@ -836,7 +840,7 @@ void print_mlfqs(void) {
 }
 
 void update_priority(struct thread *t) {
-  t->priority = ((int8_t) PRI_MAX) - (int8_t) (((int64_t) FLOAT_INT_ZERO(t->recent_cpu_time)) / ((int64_t) 4)) 
+  t->priority = ((int8_t) PRI_MAX) - (int8_t) (((int64_t) FLOAT_INT_ROUND(t->recent_cpu_time)) / ((int64_t) 4)) 
                                     - (int8_t) (((int64_t) 2) * ((int64_t) t->nice));
   
   if (t->priority < PRI_MIN)

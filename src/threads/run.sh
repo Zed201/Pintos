@@ -1,3 +1,3 @@
 #!/usr/bin/zsh
 
-make clean && make check
+make clean && make check -j6

@@ -95,7 +95,7 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     uint64_t sleep_time;
-    int recent_cpu_time;
+    float_type recent_cpu_time;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -104,7 +104,6 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
     int64_t sleep_ticks;
-    int iteration;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -170,7 +169,7 @@ void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);
 void update_priorities();
-
+void update_priority(struct thread *t);
 // for handling multiple schedules
 void add_ready(struct list_elem* elem);
 bool ready_empty(void);
