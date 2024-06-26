@@ -849,55 +849,64 @@ void update_priority(struct thread *t) {
 
 }
 
+void up_for(struct thread* t, void* aux){
+  if(t != idle_thread && t != thread_current()){
+    int i = t->priority;
+    update_priority(t);
+    if(t->priority != i){
+      list_remove(&t->elem);
+      add_ready(&t->elem);
+    }
+  }
+}
+
 void update_priorities(void) {
-  struct list_elem *e;
-  struct thread *t;
-  struct list_elem *tmp = NULL;
-  struct list tmp_change;
-  list_init(&tmp_change);
+  // struct list_elem *e;
+  // struct thread *t;
+  // struct list_elem *tmp = NULL;
+  // struct list tmp_change;
+  // list_init(&tmp_change);
   enum intr_level old_level = intr_disable();
 
   // for current thread
   if (thread_current() != idle_thread) {
     update_priority(thread_current());
   }
-
+  thread_foreach(up_for, NULL);
   // for ready list
-    for(int i = PRI_MAX; i >= 0; i--){
-        e = list_begin(&ready_multi[i]);
-        while (e != list_end(&ready_multi[i])) {
-            t = list_entry (e, struct thread, elem);
+    // for(int i = PRI_MAX; i >= 0; i--){
+    //     e = list_begin(&ready_multi[i]);
+    //     while (e != list_end(&ready_multi[i])) {
+    //         t = list_entry (e, struct thread, elem);
 
-            if (t != idle_thread) {
-                //continue;
+    //         if (t != idle_thread) {
+    //             //continue;
+    //             update_priority(t);
 
-
-                update_priority(t);
-
-                if (t->priority != i) {
-                    tmp = e;
-                    e = list_remove(e);
-                    list_push_back(&tmp_change, tmp);
-                }
-                else {
-                    e = list_next(e);
-                }
-            }
-        }
-    }
+    //             if (t->priority != i) {
+    //                 tmp = e;
+    //                 e = list_remove(e);
+    //                 list_push_back(&tmp_change, tmp);
+    //             }
+    //             else {
+    //                 e = list_next(e);
+    //             }
+    //         }
+    //     }
+    // }
 
   // for blocked list
-  for (e = list_begin(&block_list); e != list_end(&block_list); e = list_next(e)) {
-    t = list_entry (e, struct thread, elem);
-    update_priority(t);
-  }
+  // for (e = list_begin(&block_list); e != list_end(&block_list); e = list_next(e)) {
+  //   t = list_entry (e, struct thread, elem);
+  //   update_priority(t);
+  // }
 
-  while (list_size(&tmp_change) != 0)
-  {
-    e = list_pop_front(&tmp_change);
-    t = list_entry (e, struct thread, elem);
-    list_push_back(&ready_multi[(int) t->priority], e);
-  }
+  // while (list_size(&tmp_change) != 0)
+  // {
+  //   e = list_pop_front(&tmp_change);
+  //   t = list_entry (e, struct thread, elem);
+  //   list_push_back(&ready_multi[(int) t->priority], e);
+  // }
   intr_set_level(old_level);
 }
 
