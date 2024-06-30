@@ -135,16 +135,22 @@ sema_up (struct semaphore *sema)
     else {
         next_thread = list_pop_front(&sema->waiters);
     }
+
     struct thread *t = list_entry (next_thread, struct thread, elem);
+    if (thread_mlfqs){
+        update_priority(t);
+    }
+
+    ASSERT(t->status == THREAD_BLOCKED);
     thread_unblock (t);
   }
     
   sema->value++;
   intr_set_level (old_level);
 
-  if (thread_mlfqs) 
-    update_priorities();
-  if (thread_mlfqs && max_priority != -1 && max_priority > thread_current()->priority) {
+  //if (thread_mlfqs) 
+  //  update_priorities();
+  if (thread_mlfqs && max_priority > thread_current()->priority) {
     thread_yield();
   }
 }

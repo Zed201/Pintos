@@ -149,8 +149,9 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux);
-void avg_cal();
-void add_cpu();
+void avg_cal(void);
+void add_cpu(void);
+void update_data(struct thread *t, void *aux);
 void cpu_calc(struct thread *t, void *aux);
 
 void thread_yield_block(int sleep_time);
@@ -165,15 +166,17 @@ bool rr_ready_empty(void);
 struct list_elem *rr_pop_next_ready(void);
 
 // mlfqs 
+int hightest_priority();
 void print_mlfqs(void);
 void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);
-void update_priorities();
+void update_priority_one(struct thread *t);
+void update_priorities(bool update_cpu);
 
 // for handling multiple schedules
-void add_ready(struct list_elem* elem);
-bool ready_empty(void);
-struct list_elem *pop_next_ready(void);
+static void (*add_ready)(struct list_elem* elem);
+static bool (*ready_empty)(void);
+static struct list_elem *(*pop_next_ready)(void);
 
 #endif /* threads/thread.h */

@@ -92,16 +92,16 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks_) 
 {
-    if(ticks_ <= 0){ // para passar no negative e no zero
-            return;
-    }
+  if(ticks_ <= 0){ // para passar no negative e no zero
+    return;
+  }
+
   //int64_t start = timer_ticks ();
   ASSERT (intr_get_level () == INTR_ON);
   thread_yield_block(ticks_ + timer_ticks());
   //while (timer_elapsed (start) < ticks) 
   //  thread_yield ();
 
-  
 
 }
 
