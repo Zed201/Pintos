@@ -174,6 +174,7 @@ void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);
 void update_priority_one(struct thread *t);
+void update_priority(struct thread *t);
 void update_info(int64_t time);
 
 // for handling multiple schedules
