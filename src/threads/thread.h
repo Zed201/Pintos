@@ -88,7 +88,7 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int8_t priority, nice;                       /* Priority e nice. */
+    int64_t priority, nice;                       /* Priority e nice. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -172,11 +172,11 @@ void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);
 void update_priority_one(struct thread *t);
-void update_priorities(bool update_cpu);
+void update_info(int64_t time);
 
 // for handling multiple schedules
-static void (*add_ready)(struct list_elem* elem);
-static bool (*ready_empty)(void);
-static struct list_elem *(*pop_next_ready)(void);
+void add_ready(struct list_elem* elem);
+bool ready_empty(void);
+struct list_elem *pop_next_ready(void);
 
 #endif /* threads/thread.h */

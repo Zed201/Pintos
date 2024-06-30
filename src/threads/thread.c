@@ -109,20 +109,6 @@ thread_init (void)
   list_init (&all_list);
   list_init(&block_list);
 
-  switch (thread_mlfqs)
-  {
-  case true:
-    add_ready = ml_add_ready;
-    ready_empty = ml_ready_empty;
-    pop_next_ready = ml_pop_next_ready;
-    break;
-  default:
-    add_ready = rr_add_ready;
-    ready_empty = rr_ready_empty;
-    pop_next_ready = rr_pop_next_ready;
-    break;
-  }
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -162,9 +148,7 @@ thread_tick (void)
     if(timer_ticks() % TIMER_FREQ == 0){
       avg_cal();
     }
-    if (thread_ticks % 4 == 0) {
-      update_priorities((timer_ticks() % TIMER_FREQ == 0));
-    }
+    update_info(timer_ticks());
     
     intr_set_level(old_level);
   }
@@ -419,18 +403,13 @@ thread_set_nice (int nice UNUSED)
   enum intr_level old_level;
   
   t->nice = nice;
+
   // recalcula a prioridade
   int8_t past_priority = t->priority;
   update_priority(t);
 
   if (thread_mlfqs && t->priority < hightest_priority()) {
     thread_yield(); 
-    //old_level = intr_disable ();
-    //if (t != idle_thread) 
-    //    add_ready(&t->elem);
-    //t->status = THREAD_READY;
-    //schedule ();
-    //intr_set_level (old_level);
   }
 
 }
@@ -446,11 +425,7 @@ void avg_cal(){
   float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
   float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
 
-  avg = FLOAT_MUL(a, avg) + FLOAT_INT_MUL(b, (int64_t) (ready_list_size() + (thread_current() != idle_thread)));
-  //printf("current thread: %s\n", thread_current()->name);
-  //printf("coef: %lld, %lld, %lld\n", FLOAT_MUL(a, avg),
-  //        INT_FLOAT(ready_list_size() + (thread_current() != idle_thread))),
-  //        FLOAT_MUL(b, INT_FLOAT(ready_list_size() + (thread_current() != idle_thread)));
+  avg = FLOAT_MUL(a, avg) + FLOAT_INT_MUL(b, ((int64_t)ready_list_size() + (int64_t)(thread_current() != idle_thread)));
 }
 
 /* Returns 100 times the system load average. */
@@ -460,7 +435,7 @@ thread_get_load_avg (void)
   enum intr_level old_level = intr_disable();
   int r =  FLOAT_INT_ROUND(avg * 100);
   intr_set_level(old_level);
-  // printf("thread: %s, load avg: %d\n", thread_current()->name, r);
+
   return r;
 }
 
@@ -917,8 +892,7 @@ void update_priority(struct thread *t) {
     return;
   }
 
-  t->priority = ((int8_t) PRI_MAX) - (int8_t) (((int64_t) FLOAT_INT_ZERO(t->recent_cpu_time)) / ((int64_t) 4)) 
-                                    - (int8_t) (((int64_t) 2) * ((int64_t) t->nice));
+  t->priority = FLOAT_INT_ZERO( (INT_FLOAT(PRI_MAX) - FLOAT_INT_DIV(t->recent_cpu_time, ((int64_t) 4)) - INT_FLOAT((2 * t->nice)) ));
   
   if (t->priority < PRI_MIN)
     t->priority = PRI_MIN;
@@ -927,7 +901,7 @@ void update_priority(struct thread *t) {
     t->priority = PRI_MAX;
 }
 
-void update_priorities(bool update_cpu) {
+void update_info(int64_t time) {
   struct list_elem *e;
   struct thread *t;
 
@@ -939,11 +913,11 @@ void update_priorities(bool update_cpu) {
   
     t = list_entry (e, struct thread, allelem);
 
-    if (update_cpu) {
+    if (time % TIMER_FREQ == 0) {
       cpu_calc(t, NULL);
     }
     
-    if (t == idle_thread) {
+    if (t == idle_thread || !(time % 4 == 0)) {
       continue;
     }
     
@@ -958,7 +932,7 @@ void update_priorities(bool update_cpu) {
   }
 }
 
-/* // for handling multiple schedules
+// for handling multiple schedules
 void add_ready(struct list_elem* elem) {
   switch (thread_mlfqs)
   {
@@ -993,4 +967,4 @@ struct list_elem *pop_next_ready(void) {
   default:
     return NULL;
   }
-} */
+} 
