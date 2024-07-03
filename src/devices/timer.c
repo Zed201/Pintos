@@ -86,27 +86,21 @@ timer_elapsed (int64_t then)
 }
 
 //////////////////////////////////////////////////////////////////
-
+//////////////////////////////////////////////////////////////////
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
 timer_sleep (int64_t ticks_) 
 {
-  if(ticks_ <= 0){ // para passar no negative e no zero
+  // Checar se não é um valor negativo ou zero;
+  if(ticks_ <= 0)
     return;
-  }
-
-  //int64_t start = timer_ticks ();
+  
   ASSERT (intr_get_level () == INTR_ON);
-  // mas a modificação basicamente ele chama uma função que vai definir o tempo quando ela vai acordar
+  // Função para definir o tempo que a thread vai demorar para acordar;
   thread_yield_block(ticks_ + timer_ticks());
-  // Originalmente as threads ficavam em espera ocupada chamando o thread_yield que trocava a thread em execução
-  // while (timer_elapsed (start) < ticks) 
-  //  thread_yield ();
-
-
 }
-
+//////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be

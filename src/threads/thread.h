@@ -81,6 +81,8 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
+////////////////////////////////////////
+////////////////////////////////////////
 struct thread
   {
     /* Owned by thread.c. */
@@ -88,16 +90,18 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int64_t priority, nice;                       /* Priority e nice. */
+    // Criar uma variável para armazenar o priority e nice de maneira adequada;
+    int64_t priority, nice;             /* Priority e nice. */
 
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    //////////////////////////////
-    uint64_t sleep_time;
-    int recent_cpu_time;
+    // Criar uma variável para armazenar o sleep_time de maneira adequada;
+    uint64_t sleep_time;                /* Sleep time. */
+    // Criar uma variável para armazenar o recent_cpu de maneira adequada;
+    int recent_cpu_time;                /* Recent CPU time. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -106,17 +110,26 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-    int64_t sleep_ticks;
-    int iteration;
+    // Criar uma variável para armazenar o tempo que a thread irá dormir;
+    int64_t sleep_ticks;                /* Sleep ticks. */
   };
+////////////////////////////////////////
+////////////////////////////////////////
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+////////////////////////////////////////
+////////////////////////////////////////
+// Criar uma lista para armazenar as threads bloqueadas;
 static struct list block_list;
 
+// Criar o avg global;
 static float_type avg = 0;
+////////////////////////////////////////
+////////////////////////////////////////
 
 void thread_init (void);
 void thread_start (void);
@@ -143,12 +156,17 @@ typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
 //////////////////////////////
+//////////////////////////////
+// Funções modificadas para a implementação;
 int thread_get_priority (void);
 void thread_set_priority (int);
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+// Funções criadas para a implementação;
+
 bool ord (const struct list_elem *a, const struct list_elem *b, void *aux);
 void avg_cal(void);
 void add_cpu(void);
@@ -159,12 +177,12 @@ void wake(int64_t ticks);
 void init_ready_lists();
 size_t ready_list_size();
 
-// round_robin 
+   // round_robin; 
 void rr_add_ready(struct list_elem* elem);
 bool rr_ready_empty(void);
 struct list_elem *rr_pop_next_ready(void);
 
-// mlfqs 
+   // mlfqs;
 int hightest_priority();
 void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
@@ -173,9 +191,11 @@ void update_priority_one(struct thread *t);
 void update_priority(struct thread *t);
 void update_info(int64_t time);
 
-// for handling multiple schedules
+   // for handling multiple schedules;
 void add_ready(struct list_elem* elem);
 bool ready_empty(void);
 struct list_elem *pop_next_ready(void);
+//////////////////////////////
+//////////////////////////////
 
 #endif /* threads/thread.h */

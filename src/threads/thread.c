@@ -29,14 +29,19 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
-// multi level queue 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
+// Multi-level queue; 
 static struct list ready_multi[PRI_MAX + 1];
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+// Lista de threads bloqueadas;
 static struct list block_list;
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -70,10 +75,6 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
-/* void (*add_ready)(struct list_elem* elem);
-bool (*ready_empty)(void);
-struct list_elem *(*pop_next_ready)(void);
- */
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -86,6 +87,8 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -105,8 +108,10 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
+  // Inicializando a lista de threads prontas;
   init_ready_lists();
   list_init (&all_list);
+  // Inicializando a lista de threads bloqueadas;
   list_init(&block_list);
 
   /* Set up a thread structure for the running thread. */
@@ -115,6 +120,8 @@ thread_init (void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
@@ -133,13 +140,15 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
 thread_tick (void) 
 {  
   struct thread *t = thread_current ();
-  // Atualização do recent_cpu e prioridade das threads
+  // Atualiza o cpu_recent_time da thread atual;
   if(thread_mlfqs){
     enum intr_level old_level = intr_disable();
     if (thread_current() != idle_thread)
@@ -165,11 +174,11 @@ thread_tick (void)
     kernel_ticks++;
    
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE) {
+  if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
-  }
-  
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Prints thread statistics. */
 void
@@ -252,6 +261,8 @@ thread_block (void)
   schedule ();
 }
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -268,12 +279,14 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
-        //printf("status thread -> %d\n", t->status);
   ASSERT (t->status == THREAD_BLOCKED);
+  // Adiciona a thread na lista de prontos;
   add_ready (&t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Returns the name of the running thread. */
 const char *
@@ -328,6 +341,8 @@ thread_exit (void)
   NOT_REACHED ();
 }
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 void
@@ -340,11 +355,14 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
+    // Adiciona a thread na lista de prontos;
     add_ready(&cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
@@ -363,6 +381,9 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
+// Determina a prioridade da thread atual;
 void
 thread_set_priority (int new_priority) 
 {
@@ -387,13 +408,11 @@ thread_set_nice (int nice UNUSED)
   
   t->nice = nice;
 
-  // recalcula a prioridade
+  // Atualiza a prioridade;
   update_priority(t);
-  // ajusta a ordem atual de execução das threads de acordo com a nova prioridade
-  if (thread_mlfqs && t->priority < hightest_priority()) {
+  // Ajusta a ordem atual de execução das threads de acordo com a nova prioridade;
+  if (thread_mlfqs && t->priority < hightest_priority())
     thread_yield(); 
-  }
-
 }
 
 /* Returns the current thread's nice value. */
@@ -402,8 +421,11 @@ thread_get_nice (void)
 {
   return thread_current()->nice;
 }
-// calculo da formula do avg, a cada 1 segundo, usando a implementação do float que criamos no lib/kernel
-void avg_cal(){ 
+
+// Calcula o avg usando a implementação do float que criamos no lib/kernel;
+void
+avg_cal()
+{ 
   float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
   float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
 
@@ -421,20 +443,21 @@ thread_get_load_avg (void)
   return r;
 }
 
-// a cada 4 ticks ele recalcula o cpu_recent_time da thread atual
-void cpu_calc(struct thread *t, void *aux){
-  // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
-  if(t != idle_thread){
+// Calcula o recent_cpu_time da thread atual;
+void
+cpu_calc(struct thread *t, void *aux)
+{
+  if(t != idle_thread)
     t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
-  }
 }
 
-// soma o cpu_recent_time da thread atual
-void add_cpu(){
+// Soma o recent_cpu_time da thread atual em 1;
+void
+add_cpu()
+{
   struct thread *t = thread_current();
-  if(t != idle_thread){
-          t->recent_cpu_time = FLOAT_INT_ADD(t->recent_cpu_time, 1);
-  }
+  if(t != idle_thread)
+    t->recent_cpu_time = FLOAT_INT_ADD(t->recent_cpu_time, 1);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -447,6 +470,8 @@ thread_get_recent_cpu (void)
   
   return c;
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
@@ -519,6 +544,8 @@ is_thread (struct thread *t)
   return t != NULL && t->magic == THREAD_MAGIC;
 }
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
@@ -534,8 +561,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  ////////////////////////////////////////////////////////
-  // iniciando os valores adicionais
+
+// Iniciando os valores adicionais das threads conforme previsto;
   if (!thread_mlfqs) {
     t->priority = priority;
   }
@@ -555,11 +582,14 @@ init_thread (struct thread *t, const char *name, int priority)
       t->recent_cpu_time = 0;
       t->nice = 0;
   }
-  ////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
    returns a pointer to the frame's base. */
@@ -574,6 +604,8 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -582,15 +614,17 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  if(!list_empty(&block_list)){
+  // Verifica se a lista de prontos está vazia;
+  if(!list_empty(&block_list))
     wake(timer_ticks());
-  }
 
   if (ready_empty())
     return idle_thread;
   else
     return list_entry (pop_next_ready(), struct thread, elem);
 }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
@@ -680,48 +714,58 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
-////////////////////////////////////////////////////////////////// Funções criadas necessárias
-
-bool ord (const struct list_elem *a, const struct list_elem *b, void *aux){
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
+// Ordenas as threads de acordo com o tempo de bloqueio;
+bool
+ord (const struct list_elem *a, const struct list_elem *b, void *aux)
+{
   struct thread *A = list_entry(a, struct thread, elem), *B = list_entry(b, struct thread, elem);
 
   return A->sleep_time > B->sleep_time;
-
 }
 
-void thread_yield_block(int sleep_time){
-    struct thread *t = thread_current();
-    enum intr_level old_level;
+// Bloqueia a thread atual por um tempo determinado;
+void
+thread_yield_block(int sleep_time)
+{
+  struct thread *t = thread_current();
+  enum intr_level old_level;
 
-    ASSERT (!intr_context ());
+  ASSERT (!intr_context ());
 
-    if(t != idle_thread){
-      t->sleep_time = sleep_time;
-      old_level  = intr_disable();
-      
-      list_insert_ordered(&block_list, &(t->elem), ord, NULL);
-      thread_block();
-      intr_set_level(old_level);
-    }
+  if(t != idle_thread){
+    t->sleep_time = sleep_time;
+    old_level  = intr_disable();
+    
+    list_insert_ordered(&block_list, &(t->elem), ord, NULL);
+    thread_block();
+    intr_set_level(old_level);
+  }
 }
 
-void wake(int64_t ticks){
-  
+// Acorda as threads que estão bloqueadas;
+void
+wake(int64_t ticks)
+{  
   enum intr_level old_level;
   old_level = intr_disable();
   intr_set_level(old_level);
   struct list_elem *e = list_rbegin(&block_list);
-  while(e != list_rend(&block_list)){
+  // Verifica se a thread está bloqueada;
+  while(e != list_rend(&block_list))
+  {
     struct thread *t = list_entry(e, struct thread, elem);
 
+    // Verifica se o tempo de bloqueio da thread é menor ou igual ao tempo atual;
     if(t->sleep_time <= ticks){
       old_level = intr_disable();
       list_pop_back(&block_list);
-      //list_push_back(&ready_list, &(t->elem)); // usar o block e o unblock ele buga no assert do thread_current
+
       ASSERT(t->status == THREAD_BLOCKED);
       thread_unblock(t);
 
-      // unblock
+      // Desbloquear;
       if(!list_empty(&block_list)){
         e = list_rbegin(&block_list);
       } else {
@@ -735,13 +779,15 @@ void wake(int64_t ticks){
   intr_set_level(old_level);
 }
 
-void init_ready_lists(void){
+// Inicializa as listas de prontos;
+void
+init_ready_lists(void)
+{
   switch (thread_mlfqs)
   {
   case true:
-    for(int i = 0; i < PRI_MAX + 1; i++){
-        list_init (&ready_multi[i]);
-    }
+    for(int i = 0; i < PRI_MAX + 1; i++)
+      list_init (&ready_multi[i]);
     break;
   case false:
     list_init (&ready_list);
@@ -751,14 +797,16 @@ void init_ready_lists(void){
   }
 }
 
-size_t ready_list_size() {
+// Retorna o tamanho da lista de prontos;
+size_t
+ready_list_size()
+{
   switch (thread_mlfqs)
   {
   case true:
     size_t total = 0;
-    for (int i = 0; i <= PRI_MAX; i++) {
-        total += list_size(&ready_multi[i]);
-    }
+    for (int i = 0; i <= PRI_MAX; i++)
+      total += list_size(&ready_multi[i]);
     return total;
   case false:
     return list_size(&ready_list);    
@@ -767,69 +815,83 @@ size_t ready_list_size() {
   }
 }
 
-int hightest_priority() {
+// Retorna a prioridade mais alta;
+int
+hightest_priority()
+{
   switch (thread_mlfqs)
   {
   case true:
-    for (int i = PRI_MAX; i >= 0; i--) {
-      if (!list_empty(&ready_multi[i])) {
+    for (int i = PRI_MAX; i >= 0; i--)
+      if (!list_empty(&ready_multi[i]))
         return i;
-      }
-    }
     return -1;
   case false:
-    if (list_empty(&ready_list)) {
+    if (list_empty(&ready_list))
       return -1;
-    }
     return list_entry(list_begin(&ready_list), struct thread, elem)->priority;
   default:
     break;
   }
 }
 
-// round_robin
-void rr_add_ready(struct list_elem* elem) {
+/////////////////////////////////////////////////////////////////
+// round_robin;
+void
+rr_add_ready(struct list_elem* elem)
+{
   list_push_back(&ready_list, elem);
 }
 
-bool rr_ready_empty(void) {
+bool
+rr_ready_empty(void)
+{
   return list_empty(&ready_list);
 }
 
-struct list_elem *rr_pop_next_ready(void) {
+struct list_elem *
+rr_pop_next_ready(void)
+{
   return list_pop_front(&ready_list);
 }
+/////////////////////////////////////////////////////////////////
 
-// multi level feedback queue
-void ml_add_ready(struct list_elem* elem) {
+/////////////////////////////////////////////////////////////////
+// MLFQS;
+void
+ml_add_ready(struct list_elem* elem)
+{
   struct thread *t = list_entry(elem, struct thread, elem);
   list_push_back(&ready_multi[(int) t->priority], elem);
 }
 
-bool ml_ready_empty(void) {
-  for(int i = 0; i <= PRI_MAX; i++){
-    if(!list_empty(&ready_multi[i])){
-        return false;
-    }
-  }
+bool
+ml_ready_empty(void)
+{
+  for(int i = 0; i <= PRI_MAX; i++)
+    if(!list_empty(&ready_multi[i]))
+      return false;
 
   return true;
 }
 
-struct list_elem *ml_pop_next_ready(void) {
-  for(int i = PRI_MAX; i >= 0; i--){
-    if(!list_empty(&(ready_multi[i]))){
-        return list_pop_front(&(ready_multi[i]));
-    }
-  }
+struct list_elem *
+ml_pop_next_ready(void)
+{
+  for(int i = PRI_MAX; i >= 0; i--)
+    if(!list_empty(&(ready_multi[i])))
+      return list_pop_front(&(ready_multi[i]));
 
   return NULL;
 }
+/////////////////////////////////////////////////////////////////
 
-void update_priority(struct thread *t) {
-  if (t == idle_thread) {
+// Atualiza a prioridade da thread;
+void
+update_priority(struct thread *t)
+{
+  if (t == idle_thread)
     return;
-  }
 
   t->priority = FLOAT_INT_ZERO( (INT_FLOAT(PRI_MAX) - FLOAT_INT_DIV(t->recent_cpu_time, ((int64_t) 4)) - INT_FLOAT((2 * t->nice)) ));
   
@@ -840,7 +902,10 @@ void update_priority(struct thread *t) {
     t->priority = PRI_MAX;
 }
 
-void update_info(int64_t time) {
+// Atualiza as informações das threads;
+void
+update_info(int64_t time)
+{
   struct list_elem *e;
   struct thread *t;
 
@@ -871,8 +936,11 @@ void update_info(int64_t time) {
   }
 }
 
-// for handling multiple schedules
-void add_ready(struct list_elem* elem) {
+/////////////////////////////////////////////////////////////////
+// For handling multiple schedules;
+void
+add_ready(struct list_elem* elem)
+{
   switch (thread_mlfqs)
   {
   case true:
@@ -884,7 +952,9 @@ void add_ready(struct list_elem* elem) {
   }
 }
 
-bool ready_empty(void) {
+bool
+ready_empty(void)
+{
   switch (thread_mlfqs)
   {
   case true:
@@ -896,7 +966,9 @@ bool ready_empty(void) {
   }
 }
 
-struct list_elem *pop_next_ready(void) {
+struct list_elem *
+pop_next_ready(void)
+{
   switch (thread_mlfqs)
   {
   case true:
@@ -906,4 +978,8 @@ struct list_elem *pop_next_ready(void) {
   default:
     return NULL;
   }
-} 
+}
+/////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////

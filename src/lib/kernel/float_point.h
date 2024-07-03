@@ -4,25 +4,31 @@
 #define Q 14
 #define F (1 << Q)
 
-// vai retornar apenas 2^p, pois tudo é na base 2
+// Retorne 2^P;
 typedef int float_type;
-// converter integer to float_type
+// Converter int para float_type;
 #define INT_FLOAT(n) ((float_type)(n << Q))
-// soma/sub entre dois float type
+
+// Soma entre dois float_type;
 #define FLOAT_ADD(x, y) (x + y)
+// Subtração entre dois float_type;
 #define FLOAT_SUB(x, y) (x - y)
-// multi/divide entre dois float type
+// Multiplicação entre dois float_type;
 #define FLOAT_MUL(x, y) ((float_type)((((int64_t) x) * y / F)))
+// Divisão entre dois float_type;
 #define FLOAT_DIV(x, y) ((float_type)((((int64_t) x) * F / y)))
-// soma/sub entre float type(x) e integer(n)
+
+// Soma entre float_type(x) e int(n);
 #define FLOAT_INT_ADD(x, n) (x + (n << Q))
+// Subtração entre float_type(x) e int(n);
 #define FLOAT_INT_SUB(x, n) (x - (n << Q))
-// multi/div entre float type(x) e integer(n)
+// Multiplicação entre float_type(x) e int(n);
 #define FLOAT_INT_MUL(x, n) (x * n)
+// Divisão entre float_type(x) e int(n);
 #define FLOAT_INT_DIV(x, n) (x / n)
 
-// basicamente retorna a parte inteira
+// Retornar a parte inteira;
 #define FLOAT_INT_ZERO(x) (int) (x >> Q)
-// round de float
+// Arredondar para o inteiro mais próximo;
 #define FLOAT_INT_ROUND(x) (x >= 0) ? (x + (F/2))/F : (x - (F/2))/F
 #endif

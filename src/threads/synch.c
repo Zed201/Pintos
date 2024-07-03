@@ -101,11 +101,12 @@ sema_try_down (struct semaphore *sema)
   return success;
 }
 
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 /* Up or "V" operation on a semaphore.  Increments SEMA's value
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
-////////////////////////////////////////////////////////////
 void
 sema_up (struct semaphore *sema) 
 {
@@ -117,10 +118,8 @@ sema_up (struct semaphore *sema)
   struct list_elem *next_thread = NULL;
   int8_t max_priority = PRI_MIN - 1;
   if (!list_empty (&sema->waiters)) {
-    // thread trava um recurso e quem vai pegar ele deve ter maior prioridade
-    // procura nas thread que estão travadas em um semáforo por aquela que tem a maior prioridade
+    // Encontra a thread de maior prioridade para desbloquear;
     if (thread_mlfqs) {
-      
       for (struct list_elem* e = list_begin (&sema->waiters); 
             e != list_end (&sema->waiters); e = list_next (e)) 
       {
@@ -134,27 +133,31 @@ sema_up (struct semaphore *sema)
 
       list_remove(next_thread);      
     } 
-    else { // padrão 
-        next_thread = list_pop_front(&sema->waiters);
+    else {
+      next_thread = list_pop_front(&sema->waiters);
     }
 
     struct thread *t = list_entry (next_thread, struct thread, elem);
-    if (thread_mlfqs){
-        update_priority(t);
-    }
-    // desbloqueia a thread de maior prioridade
+    // Atualiza a prioridade da thread que vai ser liberada se for uma mlfqs;
+    if (thread_mlfqs)
+      update_priority(t);
+    
+    // Desbloqueia a thread;
     ASSERT(t->status == THREAD_BLOCKED);
     thread_unblock (t);
   }
     
   sema->value++;
   intr_set_level (old_level);
-  // se a maior prirodade da thread que vai ser liberada for maior que a da thread atual
+  
+  // Verificar se a prioridade da thread atual é menor que a da thread desbloqueada;
   if (thread_mlfqs && max_priority > thread_current()->priority) {
     thread_yield();
   }
 }
 ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
 static void sema_test_helper (void *sema_);
 
 /* Self-test for semaphores that makes control "ping-pong"
