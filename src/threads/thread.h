@@ -141,8 +141,6 @@ void thread_yield (void);
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
-/* Para debugar por qualquer list */
-void thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux);
 
 //////////////////////////////
 int thread_get_priority (void);
@@ -151,10 +149,9 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-bool Reord (const struct list_elem *a, const struct list_elem *b, void *aux);
+bool ord (const struct list_elem *a, const struct list_elem *b, void *aux);
 void avg_cal(void);
 void add_cpu(void);
-void update_data(struct thread *t, void *aux);
 void cpu_calc(struct thread *t, void *aux);
 void thread_yield_block(int sleep_time);
 void wake(int64_t ticks);
@@ -169,7 +166,6 @@ struct list_elem *rr_pop_next_ready(void);
 
 // mlfqs 
 int hightest_priority();
-void print_mlfqs(void);
 void ml_add_ready(struct list_elem* elem);
 bool ml_ready_empty(void);
 struct list_elem *ml_pop_next_ready(void);

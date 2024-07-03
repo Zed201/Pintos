@@ -105,6 +105,7 @@ sema_try_down (struct semaphore *sema)
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
+////////////////////////////////////////////////////////////
 void
 sema_up (struct semaphore *sema) 
 {
@@ -116,9 +117,10 @@ sema_up (struct semaphore *sema)
   struct list_elem *next_thread = NULL;
   int8_t max_priority = PRI_MIN - 1;
   if (!list_empty (&sema->waiters)) {
-
+    // thread trava um recurso e quem vai pegar ele deve ter maior prioridade
+    // procura nas thread que estão travadas em um semáforo por aquela que tem a maior prioridade
     if (thread_mlfqs) {
-
+      
       for (struct list_elem* e = list_begin (&sema->waiters); 
             e != list_end (&sema->waiters); e = list_next (e)) 
       {
@@ -132,7 +134,7 @@ sema_up (struct semaphore *sema)
 
       list_remove(next_thread);      
     } 
-    else {
+    else { // padrão 
         next_thread = list_pop_front(&sema->waiters);
     }
 
@@ -140,19 +142,19 @@ sema_up (struct semaphore *sema)
     if (thread_mlfqs){
         update_priority(t);
     }
-
+    // desbloqueia a thread de maior prioridade
     ASSERT(t->status == THREAD_BLOCKED);
     thread_unblock (t);
   }
     
   sema->value++;
   intr_set_level (old_level);
-
+  // se a maior prirodade da thread que vai ser liberada for maior que a da thread atual
   if (thread_mlfqs && max_priority > thread_current()->priority) {
     thread_yield();
   }
 }
-
+////////////////////////////////////////////////////////////
 static void sema_test_helper (void *sema_);
 
 /* Self-test for semaphores that makes control "ping-pong"

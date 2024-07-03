@@ -139,7 +139,7 @@ void
 thread_tick (void) 
 {  
   struct thread *t = thread_current ();
-    
+  // Atualização do recent_cpu e prioridade das threads
   if(thread_mlfqs){
     enum intr_level old_level = intr_disable();
     if (thread_current() != idle_thread)
@@ -296,8 +296,7 @@ thread_current (void)
      of stack, so a few big automatic arrays or moderate
      recursion can cause stack overflow. */
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_RUNNING); // retirei esse assert pois ele da erro por algum motivo
-
+  ASSERT (t->status == THREAD_RUNNING);
   return t;
 }
 
@@ -364,22 +363,6 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-
-void
-thread_foreach_n_list (struct list *n_list, thread_action_func *func, void *aux)
-{
-  struct list_elem *e;
-
-  ASSERT (intr_get_level () == INTR_OFF);
-
-  for (e = list_begin (n_list); e != list_end (n_list);
-       e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, elem);
-      func (t, aux);
-    }
-}
-
 void
 thread_set_priority (int new_priority) 
 {
@@ -405,9 +388,8 @@ thread_set_nice (int nice UNUSED)
   t->nice = nice;
 
   // recalcula a prioridade
-  int8_t past_priority = t->priority;
   update_priority(t);
-
+  // ajusta a ordem atual de execução das threads de acordo com a nova prioridade
   if (thread_mlfqs && t->priority < hightest_priority()) {
     thread_yield(); 
   }
@@ -420,7 +402,7 @@ thread_get_nice (void)
 {
   return thread_current()->nice;
 }
-
+// calculo da formula do avg, a cada 1 segundo, usando a implementação do float que criamos no lib/kernel
 void avg_cal(){ 
   float_type a = FLOAT_DIV(INT_FLOAT(59), INT_FLOAT(60));
   float_type b = FLOAT_DIV(INT_FLOAT(1), INT_FLOAT(60));
@@ -439,16 +421,16 @@ thread_get_load_avg (void)
   return r;
 }
 
-// vai ser colocado no for para ele recalcular, tem que ta com a interrupção desabilitada
-void    cpu_calc(struct thread *t, void *aux){
+// a cada 4 ticks ele recalcula o cpu_recent_time da thread atual
+void cpu_calc(struct thread *t, void *aux){
   // recent_cpu = ((2*avg)/(2*avg + 1)) * recent_cpu  + nice
   if(t != idle_thread){
     t->recent_cpu_time = FLOAT_MUL(t->recent_cpu_time, FLOAT_DIV(2*avg, FLOAT_INT_ADD(2*avg, 1))) + INT_FLOAT(t->nice);
   }
 }
 
-
-void add_cpu(){// a cada tick ele aumenta o cpu time
+// soma o cpu_recent_time da thread atual
+void add_cpu(){
   struct thread *t = thread_current();
   if(t != idle_thread){
           t->recent_cpu_time = FLOAT_INT_ADD(t->recent_cpu_time, 1);
@@ -475,6 +457,7 @@ thread_get_recent_cpu (void)
    blocks.  After that, the idle thread never appears in the
    ready list.  It is returned by next_thread_to_run() as a
    special case when the ready list is empty. */
+
 static void
 idle (void *idle_started_ UNUSED) 
 {
@@ -551,6 +534,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+  ////////////////////////////////////////////////////////
+  // iniciando os valores adicionais
   if (!thread_mlfqs) {
     t->priority = priority;
   }
@@ -570,7 +555,7 @@ init_thread (struct thread *t, const char *name, int priority)
       t->recent_cpu_time = 0;
       t->nice = 0;
   }
-
+  ////////////////////////////////////////////////////////
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -668,11 +653,6 @@ schedule (void)
   struct thread *prev = NULL;
 
   ASSERT (intr_get_level () == INTR_OFF);
-  /* TODO:
-   * Ver de usar o thread_block, mas para o schedule 
-   * tem de verificar se uma thread esta bloqueada, alem de implementar 
-   * o unblock com o tempo
-   * */
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 
@@ -700,9 +680,8 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
-/* Compares the value of two list elements A and B, given
-   auxiliary data AUX.  Returns true if A is less than B, or
-   false if A is greater than or equal to B. */
+////////////////////////////////////////////////////////////////// Funções criadas necessárias
+
 bool ord (const struct list_elem *a, const struct list_elem *b, void *aux){
   struct thread *A = list_entry(a, struct thread, elem), *B = list_entry(b, struct thread, elem);
 
@@ -845,46 +824,6 @@ struct list_elem *ml_pop_next_ready(void) {
   }
 
   return NULL;
-}
-
-void print_mlfqs(void) {
-  printf("MLFQS----\n");
-  
-  for (int i = PRI_MAX; i >= 0; i--) {
-    printf("Priority %d, size %d\n", i, list_size(&ready_multi[i]));
-    struct list_elem *e;
-    bool p_newline = false;
-    for (e = list_begin(&ready_multi[i]); e != list_end(&ready_multi[i]); e = list_next(e)) {
-      struct thread *t = list_entry(e, struct thread, elem);
-      printf("Thread %s | ", t->name);
-      p_newline = true;
-    }
-    if (p_newline)
-      printf("\n");
-  }
-}
-
-void update_priority_one(struct thread *t) {
-  if (t == idle_thread || t == thread_current()) {
-    return;
-  }
-  
-  ASSERT(t->status == THREAD_READY || t->status == THREAD_RUNNING)
-
-  int past_priority = t->priority;
-
-  t->priority = PRI_MAX - (int) FLOAT_INT_ZERO(t->recent_cpu_time) / 4 - 2 * t->nice;
-  
-  if (t->priority < PRI_MIN)
-    t->priority = PRI_MIN;
-  
-  if (t->priority > PRI_MAX)
-    t->priority = PRI_MAX;
-
-  if (t->priority != past_priority) {
-    list_remove(&t->elem);
-    list_push_back(&ready_multi[t->priority], &t->elem);
-  }
 }
 
 void update_priority(struct thread *t) {
